@@ -1,0 +1,4 @@
+/dist/tf-provider-lldap
+/.vscode
+.terraform
+.terraform.lock.hcl
