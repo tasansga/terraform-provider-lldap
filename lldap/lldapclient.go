@@ -35,7 +35,6 @@ https://github.com/lldap/lldap/blob/main/scripts/bootstrap.sh
 		--header 'Content-Type: application/json' \
 		--data @<(jq --slurpfile variables "$variables_file" '. + {"variables": $variables[0]}' "$query_file")
 	```
-
 */
 
 type LLdapClientQuery struct {
@@ -58,7 +57,7 @@ type LldapClientResponse[T interface{}] struct {
 type LldapGroup struct {
 	Id           int         `json:"id"`
 	DisplayName  string      `json:"displayName"`
-	CreationDate string      `json:"creationDate"`
+	CreationDate *string     `json:"creationDate"`
 	Users        []LldapUser `json:"users"`
 }
 
@@ -156,18 +155,48 @@ func (lc *LldapClient) Authenticate() diag.Diagnostics {
 func (lc *LldapClient) AddUserToGroup(groupId int, userId string) diag.Diagnostics {
 	// {"query":"mutation AddUserToGroup($user: String!, $group: Int!) {addUserToGroup(userId: $user, groupId: $group) {ok}}","operationName":"AddUserToGroup"}
 	// TODO
-	return nil
+	return diag.Errorf("Not implemented")
 }
 
 func (lc *LldapClient) RemoveUserFromGroup(groupId int, userId string) diag.Diagnostics {
 	// {"operationName":"RemoveUserFromGroup","query":"mutation RemoveUserFromGroup($user: String!, $group: Int!) {removeUserFromGroup(userId: $user, groupId: $group) {ok}}"}
 	// TODO
-	return nil
+	return diag.Errorf("Not implemented")
 }
 
-func (lc *LldapClient) CreateGroup(group LldapGroup) diag.Diagnostics {
-	// {"query":"mutation CreateGroup($name: String!) {createGroup(name: $name) {id displayName}}","operationName":"CreateGroup"}
-	// TODO
+func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
+	type CreateGroupVariables struct {
+		Name string `json:"name"`
+	}
+	type LldapGroupResponseData struct {
+		Group LldapGroup `json:"createGroup"`
+	}
+	query := LLdapClientQuery{
+		Query:         "mutation CreateGroup($name: String!) {createGroup(name: $name) {id displayName}}",
+		OperationName: "CreateGroup",
+		Variables: CreateGroupVariables{
+			Name: group.DisplayName,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	newGroupResponse := LldapClientResponse[LldapGroupResponseData]{}
+	unmarshErr := json.Unmarshal(response, &newGroupResponse)
+	if unmarshErr != nil {
+		return diag.Errorf("Could not unmarshal response: %s", unmarshErr)
+	}
+	if newGroupResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	group.Id = newGroupResponse.Data.Group.Id
+	for _, user := range group.Users {
+		addUserErr := lc.AddUserToGroup(newGroupResponse.Data.Group.Id, user.Id)
+		if addUserErr != nil {
+			return addUserErr
+		}
+	}
 	return nil
 }
 
@@ -200,21 +229,23 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 	return &group.Data.Group, nil
 }
 
-func (lc *LldapClient) UpdateGroup(group LldapGroup) diag.Diagnostics {
+func (lc *LldapClient) UpdateGroup(group *LldapGroup) diag.Diagnostics {
 	// TODO
-	return nil
+	// Do we need this? Changing display name is a destructive operation
+	// and there's nothing else to change.
+	return diag.Errorf("Not implemented: UpdateGroup")
 }
 
 func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
 	// {"query":"mutation DeleteGroupQuery($groupId: Int!) {deleteGroup(groupId: $groupId) {ok}}","operationName":"DeleteGroupQuery"}
 	// TODO
-	return nil
+	return diag.Errorf("Not implemented: DeleteGroup")
 }
 
-func (lc *LldapClient) CreateUser(user LldapUser) (*LldapUser, diag.Diagnostics) {
+func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 	// {"query":"mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate}}","operationName":"CreateUser"}
 	// TODO
-	return nil, nil
+	return diag.Errorf("Not implemented: CreateUser")
 }
 
 func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
@@ -246,16 +277,16 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 	return &user.Data.User, nil
 }
 
-func (lc *LldapClient) UpdateUser(user LldapUser) diag.Diagnostics {
+func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
 	// {"query":"mutation UpdateUser($user: UpdateUserInput!) {updateUser(user: $user) {ok}}","operationName":"UpdateUser"}
 	// TODO
-	return nil
+	return diag.Errorf("Not implemented: UpdateUser")
 }
 
 func (lc *LldapClient) DeleteUser(id string) diag.Diagnostics {
 	// {"query": "mutation DeleteUserQuery($user: String!) {deleteUser(userId: $user) {ok}}","operationName": "DeleteUserQuery"}
 	// TODO
-	return nil
+	return diag.Errorf("Not implemented: DeleteUser")
 }
 
 func (lc *LldapClient) GetGroups() ([]LldapGroup, diag.Diagnostics) {
@@ -263,7 +294,7 @@ func (lc *LldapClient) GetGroups() ([]LldapGroup, diag.Diagnostics) {
 		Groups []LldapGroup `json:"groups"`
 	}
 	query := LLdapClientQuery{
-		Query:         "query GetGroupList {groups {id displayName}}",
+		Query:         "query GetGroupList {groups {id displayName creationDate}}",
 		OperationName: "GetGroupList",
 	}
 	response, responseDiagErr := lc.query(query)

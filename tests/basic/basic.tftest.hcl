@@ -1,7 +1,7 @@
 run "test_users" {
   assert {
-    condition     = length(output.users) >= 1
-    error_message = "Did not find expected users"
+    condition     = length(output.users) == 1
+    error_message = "Did not find expected user"
   }
   assert {
     condition     = output.users_map["admin"]["display_name"] == "Administrator"
@@ -11,8 +11,8 @@ run "test_users" {
 
 run "test_groups" {
   assert {
-    condition     = length(output.groups) >= 1
-    error_message = "Did not find expected groups"
+    condition     = length(output.groups.groups) == 3
+    error_message = jsonencode(output.groups)
   }
   assert {
     condition     = alltrue([

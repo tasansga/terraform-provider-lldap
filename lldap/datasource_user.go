@@ -73,11 +73,21 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 	}
 	d.SetId(lluser.Id)
 	d.Set("email", lluser.Email)
-	d.Set("display_name", lluser.DisplayName)
-	d.Set("first_name", lluser.FirstName)
-	d.Set("last_name", lluser.LastName)
-	d.Set("creation_date", lluser.CreationDate)
-	d.Set("groups", dataSourceUserMembershipParser(lluser.Groups))
+	if setErr := d.Set("display_name", lluser.DisplayName); setErr != nil {
+		return diag.Errorf("Could not set display_name: %s", setErr)
+	}
+	if setErr := d.Set("first_name", lluser.FirstName); setErr != nil {
+		return diag.Errorf("Could not set first_name: %s", setErr)
+	}
+	if setErr := d.Set("last_name", lluser.LastName); setErr != nil {
+		return diag.Errorf("Could not set last_name: %s", setErr)
+	}
+	if setErr := d.Set("creation_date", lluser.CreationDate); setErr != nil {
+		return diag.Errorf("Could not set creation_date: %s", setErr)
+	}
+	if setErr := d.Set("groups", dataSourceUserMembershipParser(lluser.Groups)); setErr != nil {
+		return diag.Errorf("Could not set groups: %s", setErr)
+	}
 	return nil
 }
 

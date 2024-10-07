@@ -58,9 +58,15 @@ func dataSourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.
 		return getGroupErr
 	}
 	d.SetId(strconv.Itoa(llgroup.Id))
-	d.Set("display_name", llgroup.DisplayName)
-	d.Set("creation_date", llgroup.CreationDate)
-	d.Set("users", dataSourceGroupUsersParser(llgroup.Users))
+	if setErr := d.Set("display_name", llgroup.DisplayName); setErr != nil {
+		return diag.Errorf("Could not set display_name: %s", setErr)
+	}
+	if setErr := d.Set("creation_date", llgroup.CreationDate); setErr != nil {
+		return diag.Errorf("Could not set creation_date: %s", setErr)
+	}
+	if setErr := d.Set("users", dataSourceGroupUsersParser(llgroup.Users)); setErr != nil {
+		return diag.Errorf("Could not set users: %s", setErr)
+	}
 	return nil
 }
 

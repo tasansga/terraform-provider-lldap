@@ -17,9 +17,40 @@ func getTestClient() LldapClient {
 			UserName: "admin",
 			Password: password,
 		},
-		Token: "",
 	}
 	return client
+}
+
+func TestAddUserToGroup(t *testing.T) {
+	// TODO
+}
+
+func TestRemoveUserFromGroup(t *testing.T) {
+	// TODO
+}
+
+func TestCreateGroup(t *testing.T) {
+	// TODO
+}
+
+func TestUpdateGroup(t *testing.T) {
+	// TODO
+}
+
+func TestDeleteGroup(t *testing.T) {
+	// TODO
+}
+
+func TestCreateUser(t *testing.T) {
+	// TODO
+}
+
+func TestUpdateUser(t *testing.T) {
+	// TODO
+}
+
+func TestDeleteUser(t *testing.T) {
+	// TODO
 }
 
 func TestGetGroups(t *testing.T) {
@@ -31,9 +62,9 @@ func TestGetGroups(t *testing.T) {
 	// "lldap_admin", "lldap_password_manager", "lldap_strict_readonly"
 	assert.Equal(t, 3, len(result))
 	for _, group := range result {
-		assert.NotNil(t, group.Id)
-		assert.NotNil(t, group.DisplayName)
+		assert.NotEqual(t, "", group.DisplayName)
 		assert.NotNil(t, group.CreationDate)
+		assert.NotEqual(t, "", group.CreationDate)
 	}
 }
 

@@ -30,8 +30,9 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"lldap_group": resourceGroup(),
-			"lldap_user":  resourceUser(),
+			"lldap_group":  resourceGroup(),
+			"lldap_member": resourceMember(),
+			"lldap_user":   resourceUser(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"lldap_group":  dataSourceGroup(),
