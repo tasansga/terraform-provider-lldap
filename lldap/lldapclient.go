@@ -190,13 +190,19 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	if newGroupResponse.Errors != nil {
 		return diag.Errorf("GraphQL query returned error: %s", string(response))
 	}
-	group.Id = newGroupResponse.Data.Group.Id
 	for _, user := range group.Users {
 		addUserErr := lc.AddUserToGroup(newGroupResponse.Data.Group.Id, user.Id)
 		if addUserErr != nil {
 			return addUserErr
 		}
 	}
+	getGroup, getGroupErr := lc.GetGroup(newGroupResponse.Data.Group.Id)
+	if getGroupErr != nil {
+		return getGroupErr
+	}
+	group.CreationDate = getGroup.CreationDate
+	group.DisplayName = getGroup.DisplayName
+	group.Users = getGroup.Users
 	return nil
 }
 

@@ -71,10 +71,8 @@ func resourceGroupCreate(_ context.Context, d *schema.ResourceData, m any) diag.
 	if setErr := d.Set("display_name", group.DisplayName); setErr != nil {
 		return diag.FromErr(setErr)
 	}
-	if group.CreationDate != nil {
-		if setErr := d.Set("creation_date", group.CreationDate); setErr != nil {
-			return diag.FromErr(setErr)
-		}
+	if setErr := d.Set("creation_date", group.CreationDate); setErr != nil {
+		return diag.FromErr(setErr)
 	}
 	return nil
 }
