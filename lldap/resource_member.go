@@ -43,23 +43,23 @@ func resourceMember() *schema.Resource {
 func resourceMemberCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	//lc := m.(*LldapClient)
 	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceGroupUpdate")
+	return diag.Errorf("Not implemented: resourceMemberCreate")
 }
 
 func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	//lc := m.(*LldapClient)
 	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceGroupUpdate")
+	return diag.Errorf("Not implemented: resourceMemberRead")
 }
 
 func resourceMemberUpdate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	//lc := m.(*LldapClient)
 	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceGroupUpdate")
+	return diag.Errorf("Not implemented: resourceMemberUpdate")
 }
 
 func resourceMemberDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	//lc := m.(*LldapClient)
 	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceGroupDelete")
+	return diag.Errorf("Not implemented: resourceMemberDelete")
 }
