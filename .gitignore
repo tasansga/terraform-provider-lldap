@@ -2,3 +2,4 @@
 /.vscode
 .terraform
 .terraform.lock.hcl
+errored_test.tfstate

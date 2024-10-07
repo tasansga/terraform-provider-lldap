@@ -229,10 +229,10 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 	return &group.Data.Group, nil
 }
 
-func (lc *LldapClient) UpdateGroup(group *LldapGroup) diag.Diagnostics {
+func (lc *LldapClient) UpdateGroup(groupId int, displayName string) diag.Diagnostics {
+	// Update the display name for a given group id
 	// TODO
-	// Do we need this? Changing display name is a destructive operation
-	// and there's nothing else to change.
+	// {"query":"mutation UpdateGroup($group: UpdateGroupInput!) {updateGroup(id: $groupId, displayName: $displayName) {ok}}","operationName":"UpdateGroup"}
 	return diag.Errorf("Not implemented: UpdateGroup")
 }
 

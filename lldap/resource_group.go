@@ -2,7 +2,6 @@ package lldap
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -30,7 +29,6 @@ func resourceGroup() *schema.Resource {
 			"display_name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "Display name of this group",
 			},
 			"creation_date": {
@@ -104,13 +102,28 @@ func resourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.Di
 }
 
 func resourceGroupUpdate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceGroupUpdate")
+	lc := m.(*LldapClient)
+	groupId, getGroupIdErr := strconv.Atoi(d.Id())
+	if getGroupIdErr != nil {
+		return diag.FromErr(getGroupIdErr)
+	}
+	displayName := d.Get("display_name").(string)
+	updateErr := lc.UpdateGroup(groupId, displayName)
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
 }
 
 func resourceGroupDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceGroupDelete")
+	lc := m.(*LldapClient)
+	groupId, getGroupIdErr := strconv.Atoi(d.Id())
+	if getGroupIdErr != nil {
+		return diag.FromErr(getGroupIdErr)
+	}
+	deleteErr := lc.DeleteGroup(groupId)
+	if deleteErr != nil {
+		return deleteErr
+	}
+	return nil
 }
