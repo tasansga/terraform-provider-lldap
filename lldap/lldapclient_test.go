@@ -2,7 +2,9 @@ package lldap
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,9 +13,10 @@ import (
 func getTestClient() LldapClient {
 	hostIp := os.Getenv("LLDAP_HOST")
 	password := os.Getenv("LLDAP_PASSWORD")
+	parsedUrl, _ := url.Parse(fmt.Sprintf("http://%s:17170", hostIp))
 	client := LldapClient{
 		Config: &Config{
-			Url:      fmt.Sprintf("http://%s:17170", hostIp),
+			Url:      parsedUrl,
 			UserName: "admin",
 			Password: password,
 		},
@@ -30,11 +33,30 @@ func TestRemoveUserFromGroup(t *testing.T) {
 }
 
 func TestCreateGroup(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	group := LldapGroup{
+		DisplayName: "testCreateGroup",
+	}
+	createErr := client.CreateGroup(&group)
+	assert.Nil(t, createErr)
+	assert.NotEqual(t, 0, group.Id)
+	assert.Equal(t, "testCreateGroup", group.DisplayName)
+	assert.NotNil(t, group.DisplayName)
+	assert.Equal(t, 0, len(group.Users))
 }
 
-func TestUpdateGroup(t *testing.T) {
-	// TODO
+func TestUpdateGroupDisplayName(t *testing.T) {
+	client := getTestClient()
+	group := LldapGroup{
+		DisplayName: "test TEST test",
+	}
+	client.CreateGroup(&group)
+	expected := "TEST test TEST"
+	updateErr := client.UpdateGroupDisplayName(group.Id, expected)
+	assert.Nil(t, updateErr)
+	result, getErr := client.GetGroup(group.Id)
+	assert.Nil(t, getErr)
+	assert.Equal(t, expected, result.DisplayName)
 }
 
 func TestDeleteGroup(t *testing.T) {
@@ -58,9 +80,16 @@ func TestGetGroups(t *testing.T) {
 	result, getErr := client.GetGroups()
 	assert.Nil(t, getErr)
 	assert.NotNil(t, result)
+	groupNames := make([]string, len(result))
+	for _, v := range result {
+		groupNames = append(groupNames, v.DisplayName)
+	}
 	// LLDAP creates by default:
 	// "lldap_admin", "lldap_password_manager", "lldap_strict_readonly"
-	assert.Equal(t, 3, len(result))
+	assert.True(t, len(result) >= 3)
+	assert.True(t, slices.Contains(groupNames, "lldap_admin"))
+	assert.True(t, slices.Contains(groupNames, "lldap_password_manager"))
+	assert.True(t, slices.Contains(groupNames, "lldap_strict_readonly"))
 	for _, group := range result {
 		assert.NotEqual(t, "", group.DisplayName)
 		assert.NotNil(t, group.CreationDate)

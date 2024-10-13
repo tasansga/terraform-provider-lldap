@@ -106,7 +106,7 @@ func resourceGroupUpdate(_ context.Context, d *schema.ResourceData, m any) diag.
 		return diag.FromErr(getGroupIdErr)
 	}
 	displayName := d.Get("display_name").(string)
-	updateErr := lc.UpdateGroup(groupId, displayName)
+	updateErr := lc.UpdateGroupDisplayName(groupId, displayName)
 	if updateErr != nil {
 		return updateErr
 	}

@@ -2,6 +2,7 @@ package lldap
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -43,12 +44,25 @@ func Provider() *schema.Provider {
 	}
 
 	provider.ConfigureContextFunc = func(_ context.Context, d *schema.ResourceData) (any, diag.Diagnostics) {
+		rawUrl := d.Get("lldap_url").(string)
+		parsedUrl, parseUrlErr := url.Parse(rawUrl)
+		if parseUrlErr != nil {
+			return nil, diag.FromErr(parseUrlErr)
+		}
+		if parsedUrl.Scheme != "http" && parsedUrl.Scheme != "https" {
+			return nil, diag.Errorf("Invalid LLDAP URL: '%s'", rawUrl)
+		}
 		config := Config{
-			Url:      d.Get("lldap_url").(string),
+			Url:      parsedUrl,
 			UserName: d.Get("lldap_username").(string),
 			Password: d.Get("lldap_password").(string),
 		}
-		return config.Client()
+		client, getClientErr := config.Client()
+		if getClientErr != nil {
+			return nil, getClientErr
+		}
+		return client, nil
 	}
+
 	return provider
 }

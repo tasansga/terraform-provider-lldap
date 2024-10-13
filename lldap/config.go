@@ -1,11 +1,13 @@
 package lldap
 
 import (
+	"net/url"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 )
 
 type Config struct {
-	Url      string
+	Url      *url.URL
 	UserName string
 	Password string
 }

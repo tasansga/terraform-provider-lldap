@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -12,6 +13,9 @@ import (
 
 /*
 LLDAP GraphQL "HowTo"
+
+GraphQL schema:
+https://github.com/lldap/lldap/blob/main/schema.graphql
 
 Pre-defined GraphQL queries:
 https://github.com/lldap/lldap/tree/main/app/queries
@@ -88,7 +92,9 @@ func (lc *LldapClient) query(query LLdapClientQuery) ([]byte, diag.Diagnostics) 
 	if marshErr != nil {
 		return nil, diag.FromErr(marshErr)
 	}
-	req, reqErr := http.NewRequest("POST", fmt.Sprintf("%s/api/graphql", lc.Config.Url), strings.NewReader(string(queryJson)))
+	ref, _ := url.Parse("/api/graphql")
+	graphQlApiUrl := lc.Config.Url.ResolveReference(ref)
+	req, reqErr := http.NewRequest("POST", graphQlApiUrl.String(), strings.NewReader(string(queryJson)))
 	if reqErr != nil {
 		return nil, diag.FromErr(reqErr)
 	}
@@ -125,7 +131,9 @@ func (lc *LldapClient) Authenticate() diag.Diagnostics {
 	if marshErr != nil {
 		return diag.FromErr(marshErr)
 	}
-	req, reqErr := http.NewRequest("POST", fmt.Sprintf("%s/auth/simple/login", lc.Config.Url), strings.NewReader(string(authBody)))
+	ref, _ := url.Parse("/auth/simple/login")
+	authSimpleUrl := lc.Config.Url.ResolveReference(ref)
+	req, reqErr := http.NewRequest("POST", authSimpleUrl.String(), strings.NewReader(string(authBody)))
 	if reqErr != nil {
 		return diag.FromErr(reqErr)
 	}
@@ -200,6 +208,7 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	if getGroupErr != nil {
 		return getGroupErr
 	}
+	group.Id = newGroupResponse.Data.Group.Id
 	group.CreationDate = getGroup.CreationDate
 	group.DisplayName = getGroup.DisplayName
 	group.Users = getGroup.Users
@@ -235,11 +244,43 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 	return &group.Data.Group, nil
 }
 
-func (lc *LldapClient) UpdateGroup(groupId int, displayName string) diag.Diagnostics {
-	// Update the display name for a given group id
-	// TODO
-	// {"query":"mutation UpdateGroup($group: UpdateGroupInput!) {updateGroup(id: $groupId, displayName: $displayName) {ok}}","operationName":"UpdateGroup"}
-	return diag.Errorf("Not implemented: UpdateGroup")
+func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) diag.Diagnostics {
+	type UpdateGroupInput struct {
+		Id          int    `json:"id"`
+		DisplayName string `json:"displayName"`
+	}
+	type UpdateGroupDisplayNameVariables struct {
+		UpdateGroup UpdateGroupInput `json:"group"`
+	}
+	query := LLdapClientQuery{
+		Query:         "mutation UpdateGroup($group: UpdateGroupInput!) {updateGroup(group: $group) {ok}}",
+		OperationName: "UpdateGroup",
+		Variables: UpdateGroupDisplayNameVariables{
+			UpdateGroup: UpdateGroupInput{
+				Id:          groupId,
+				DisplayName: displayName,
+			},
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	type LldapMutateOk struct {
+		OK bool `json:"ok"`
+	}
+	type LldapUpdateGroupResponseData struct {
+		UpdateGroup LldapMutateOk `json:"updateGroup"`
+	}
+	updateResponse := LldapClientResponse[LldapUpdateGroupResponseData]{}
+	unmarshErr := json.Unmarshal(response, &updateResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if !updateResponse.Data.UpdateGroup.OK {
+		return diag.Errorf("Failed to update group display name: %s", string(response))
+	}
+	return nil
 }
 
 func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
