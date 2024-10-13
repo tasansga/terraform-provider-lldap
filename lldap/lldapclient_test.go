@@ -25,11 +25,43 @@ func getTestClient() LldapClient {
 }
 
 func TestAddUserToGroup(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	testGroup := LldapGroup{
+		DisplayName: "TestAddUserToGroup",
+	}
+	testUser := LldapUser{
+		Id: "TestAddUserToGroup",
+	}
+	client.CreateGroup(&testGroup)
+	client.CreateUser(&testUser)
+	result := client.AddUserToGroup(testGroup.Id, testUser.Id)
+	assert.Nil(t, result)
+	group, _ := client.GetGroup(testGroup.Id)
+	users := make([]string, len(group.Users))
+	for _, v := range group.Users {
+		users = append(users, v.Id)
+	}
+	assert.True(t, slices.Contains(users, "TestAddUserToGroup"))
 }
 
 func TestRemoveUserFromGroup(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	testGroup := LldapGroup{
+		DisplayName: "TestAddUserToGroup",
+	}
+	testUser := LldapUser{
+		Id: "TestAddUserToGroup",
+	}
+	client.CreateGroup(&testGroup)
+	client.CreateUser(&testUser)
+	client.AddUserToGroup(testGroup.Id, testUser.Id)
+	client.RemoveUserFromGroup(testGroup.Id, testUser.Id)
+	group, _ := client.GetGroup(testGroup.Id)
+	users := make([]string, len(group.Users))
+	for _, v := range group.Users {
+		users = append(users, v.Id)
+	}
+	assert.False(t, slices.Contains(users, "TestAddUserToGroup"))
 }
 
 func TestCreateGroup(t *testing.T) {
@@ -60,19 +92,68 @@ func TestUpdateGroupDisplayName(t *testing.T) {
 }
 
 func TestDeleteGroup(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	testGroup := LldapGroup{
+		DisplayName: "TestDeleteGroup",
+	}
+	client.CreateGroup(&testGroup)
+	result := client.DeleteGroup(testGroup.Id)
+	assert.Nil(t, result)
+	groups, _ := client.GetGroups()
+	for _, v := range groups {
+		assert.False(t, v.DisplayName == "TestDeleteGroup")
+	}
 }
 
 func TestCreateUser(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	testUser := LldapUser{
+		Id: "TestCreateUser",
+	}
+	client.CreateUser(&testUser)
+	result := client.DeleteUser(testUser.Id)
+	assert.Nil(t, result)
+	users, _ := client.GetUsers()
+	for _, v := range users {
+		assert.False(t, v.Id == "TestCreateUser")
+	}
 }
 
 func TestUpdateUser(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	testUser := LldapUser{
+		Id:          "TestUpdateUser",
+		Email:       "TestUpdateUser@test.test",
+		DisplayName: "Test Update User",
+		FirstName:   "Test",
+		LastName:    "User",
+	}
+	client.CreateUser(&testUser)
+	testUser.Email = "test@newmail.test"
+	testUser.DisplayName = "Real Test User"
+	testUser.FirstName = "First"
+	testUser.LastName = "Last"
+	updateErr := client.UpdateUser(&testUser)
+	assert.Nil(t, updateErr)
+	user, _ := client.GetUser("TestUpdateUser")
+	assert.Equal(t, "test@newmail.test", user.Email)
+	assert.Equal(t, "Real Test User", user.DisplayName)
+	assert.Equal(t, "First", user.FirstName)
+	assert.Equal(t, "Last", user.LastName)
 }
 
 func TestDeleteUser(t *testing.T) {
-	// TODO
+	client := getTestClient()
+	testUser := LldapUser{
+		Id: "TestDeleteUser",
+	}
+	client.CreateUser(&testUser)
+	result := client.DeleteUser(testUser.Id)
+	assert.Nil(t, result)
+	users, _ := client.GetUsers()
+	for _, v := range users {
+		assert.False(t, v.Id == "TestDeleteUser")
+	}
 }
 
 func TestGetGroups(t *testing.T) {
