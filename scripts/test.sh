@@ -9,42 +9,94 @@ then
     exit 1
 fi
 
-function on_exit {
-    docker stop "$cnt_id" || true
-    if [[ -d "$temp_test_dir" ]]
-    then
-        rm -vRf "$temp_test_dir"
-    fi
+function start_lldap_server {
+    local passwd=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    cnt_id=$(docker run \
+        --detach \
+        --rm \
+        --env "LLDAP_LDAP_USER_PASS=${passwd}" \
+        lldap/lldap:stable)
+    local cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$cnt_id")
+
+    sleep 3 # Need to wait for the container to be ready
+
+    export LLDAP_CONTAINER_ID="$cnt_id"
+    export LLDAP_HOST="$cnt_ip"
+    export LLDAP_PASSWORD="$passwd"
 }
 
-trap on_exit EXIT
+function stop_lldap_server {
+    docker stop "$LLDAP_CONTAINER_ID" || true
+    unset LLDAP_CONTAINER_ID
+    unset LLDAP_HOST
+    unset LLDAP_PASSWORD
+}
 
-scripts_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-tf_provider_lldap_root_dir=$(realpath "${scripts_dir}/..")
-temp_test_dir=$(mktemp -d)
+function run_unit_test {
+    start_lldap_server
+    trap stop_lldap_server RETURN
+    trap stop_lldap_server EXIT
 
-cnt_id=$(docker run \
-    --detach \
-    --rm \
-    --env LLDAP_LDAP_USER_PASS=this_is_a_very_safe_password \
-    lldap/lldap:stable)
+    go test ./lldap
+}
 
-cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$cnt_id")
-sleep 3 # Need to wait for the container to be ready
+function run_integration_test {
+    local test_path="$1"
+    start_lldap_server
+    trap stop_lldap_server RETURN
+    trap stop_lldap_server EXIT
 
-LLDAP_HOST="$cnt_ip" LLDAP_PASSWORD="this_is_a_very_safe_password" go test ./lldap
+    echo "Running test: ${test_path}"
+    cd "$test_path"
+    rm -Rvf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
+    cat > "$test_path/.tfvars" << EOF
+lldap_url="http://${LLDAP_HOST}:17170"
+lldap_username="admin"
+lldap_password="$LLDAP_PASSWORD"
+EOF
+    tofu init -reconfigure -upgrade
+    tofu test -var-file="$test_path/.tfvars"
+}
 
-cd "${tf_provider_lldap_root_dir}"
-mkdir -p "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/"
-cp "${tf_provider_lldap_root_dir}/dist/tf-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/terraform-provider-lldap"
+function run_integration_tests {
+    local scripts_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+    local tf_provider_lldap_root_dir=$(realpath "${scripts_dir}/..")
+    temp_test_dir=$(mktemp -d)
 
-for f in $tf_provider_lldap_root_dir/tests/*
-do
-    if [[ -d "$f" ]]
-    then
-        cd "$f"
-        rm -Rvf .terraform .terraform.lock.hcl
-        tofu init -reconfigure -upgrade -plugin-dir="${temp_test_dir}/plugins"
-        tofu test -var "lldap_url=http://${cnt_ip}:17170" -var 'lldap_username=admin' -var 'lldap_password=this_is_a_very_safe_password'
-    fi
-done
+    function on_integration_test_exit {
+        if [[ -d "$temp_test_dir" ]]
+        then
+            rm -vRf "$temp_test_dir"
+        fi
+    }
+    trap on_integration_test_exit RETURN
+    trap on_integration_test_exit EXIT
+
+    cd "${tf_provider_lldap_root_dir}"
+    mkdir -p "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/"
+    cp "${tf_provider_lldap_root_dir}/dist/tf-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/terraform-provider-lldap"
+
+    export TF_CLI_CONFIG_FILE="${temp_test_dir}/test.tfrc"
+    cat > "$TF_CLI_CONFIG_FILE" << EOF
+provider_installation {
+  filesystem_mirror {
+    path    = "${temp_test_dir}/plugins"
+    include = ["tasansga/lldap"]
+  }
+  direct {
+    exclude = ["tasansga/lldap"]
+  }
+}
+EOF
+
+    for f in $tf_provider_lldap_root_dir/tests/*
+    do
+        if [[ -d "$f" ]]
+        then
+            run_integration_test "$f"
+        fi
+    done
+}
+
+run_unit_test
+run_integration_tests
