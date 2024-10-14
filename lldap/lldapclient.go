@@ -285,21 +285,34 @@ func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) d
 
 func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
 	type DeleteGroupVariables struct {
-		Id int `json:"id"`
+		GroupId int `json:"groupId"`
 	}
 	query := LldapClientQuery{
 		Query:         "mutation DeleteGroupQuery($groupId: Int!) {deleteGroup(groupId: $groupId) {ok}}",
 		OperationName: "DeleteGroupQuery",
 		Variables: DeleteGroupVariables{
-			Id: id,
+			GroupId: id,
 		},
 	}
 	response, responseDiagErr := lc.query(query)
 	if responseDiagErr != nil {
 		return responseDiagErr
 	}
-	// TODO
-	return diag.Errorf("Not implemented: DeleteGroup %s", string(response))
+	type LldapMutateOk struct {
+		OK bool `json:"ok"`
+	}
+	type LldapDeleteGroupResponseData struct {
+		DeleteGroup LldapMutateOk `json:"deleteGroup"`
+	}
+	deleteResponse := LldapClientResponse[LldapDeleteGroupResponseData]{}
+	unmarshErr := json.Unmarshal(response, &deleteResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if !deleteResponse.Data.DeleteGroup.OK {
+		return diag.Errorf("Failed to delete group: %s", string(response))
+	}
+	return nil
 }
 
 func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {

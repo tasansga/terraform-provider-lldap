@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/rand"
 )
 
 func getTestClient() LldapClient {
@@ -24,13 +25,24 @@ func getTestClient() LldapClient {
 	return client
 }
 
+func randomTestSuffix(s string) string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]rune, 8)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return fmt.Sprintf("%s-%s", s, string(b))
+}
+
 func TestAddUserToGroup(t *testing.T) {
 	client := getTestClient()
+	groupName := randomTestSuffix("TestAddUserToGroup")
 	testGroup := LldapGroup{
-		DisplayName: "TestAddUserToGroup",
+		DisplayName: groupName,
 	}
+	userId := randomTestSuffix("TestAddUserToGroup")
 	testUser := LldapUser{
-		Id: "TestAddUserToGroup",
+		Id: userId,
 	}
 	client.CreateGroup(&testGroup)
 	client.CreateUser(&testUser)
@@ -41,16 +53,18 @@ func TestAddUserToGroup(t *testing.T) {
 	for _, v := range group.Users {
 		users = append(users, v.Id)
 	}
-	assert.True(t, slices.Contains(users, "TestAddUserToGroup"))
+	assert.True(t, slices.Contains(users, userId))
 }
 
 func TestRemoveUserFromGroup(t *testing.T) {
 	client := getTestClient()
+	groupName := randomTestSuffix("TestRemoveUserFromGroup")
 	testGroup := LldapGroup{
-		DisplayName: "TestAddUserToGroup",
+		DisplayName: groupName,
 	}
+	userId := randomTestSuffix("TestRemoveUserFromGroup")
 	testUser := LldapUser{
-		Id: "TestAddUserToGroup",
+		Id: userId,
 	}
 	client.CreateGroup(&testGroup)
 	client.CreateUser(&testUser)
@@ -61,68 +75,75 @@ func TestRemoveUserFromGroup(t *testing.T) {
 	for _, v := range group.Users {
 		users = append(users, v.Id)
 	}
-	assert.False(t, slices.Contains(users, "TestAddUserToGroup"))
+	assert.False(t, slices.Contains(users, userId))
 }
 
 func TestCreateGroup(t *testing.T) {
 	client := getTestClient()
+	groupName := randomTestSuffix("TestCreateGroup")
 	group := LldapGroup{
-		DisplayName: "testCreateGroup",
+		DisplayName: groupName,
 	}
 	createErr := client.CreateGroup(&group)
 	assert.Nil(t, createErr)
 	assert.NotEqual(t, 0, group.Id)
-	assert.Equal(t, "testCreateGroup", group.DisplayName)
+	assert.Equal(t, groupName, group.DisplayName)
 	assert.NotNil(t, group.DisplayName)
 	assert.Equal(t, 0, len(group.Users))
 }
 
 func TestUpdateGroupDisplayName(t *testing.T) {
 	client := getTestClient()
+	initialGroupName := randomTestSuffix("TestUpdateGroupDisplayNameI")
 	group := LldapGroup{
-		DisplayName: "test TEST test",
+		DisplayName: initialGroupName,
 	}
 	client.CreateGroup(&group)
-	expected := "TEST test TEST"
-	updateErr := client.UpdateGroupDisplayName(group.Id, expected)
+	assert.NotEqual(t, 0, group.Id)
+	expectedGroupName := randomTestSuffix("TestUpdateGroupDisplayNameE")
+	updateErr := client.UpdateGroupDisplayName(group.Id, expectedGroupName)
 	assert.Nil(t, updateErr)
 	result, getErr := client.GetGroup(group.Id)
 	assert.Nil(t, getErr)
-	assert.Equal(t, expected, result.DisplayName)
+	assert.Equal(t, expectedGroupName, result.DisplayName)
 }
 
 func TestDeleteGroup(t *testing.T) {
 	client := getTestClient()
+	groupName := randomTestSuffix("TestDeleteGroup")
 	testGroup := LldapGroup{
-		DisplayName: "TestDeleteGroup",
+		DisplayName: groupName,
 	}
 	client.CreateGroup(&testGroup)
+	assert.NotEqual(t, 0, testGroup.Id)
 	result := client.DeleteGroup(testGroup.Id)
 	assert.Nil(t, result)
 	groups, _ := client.GetGroups()
 	for _, v := range groups {
-		assert.False(t, v.DisplayName == "TestDeleteGroup")
+		assert.False(t, v.DisplayName == groupName)
 	}
 }
 
 func TestCreateUser(t *testing.T) {
 	client := getTestClient()
+	userId := randomTestSuffix("TestCreateUser")
 	testUser := LldapUser{
-		Id: "TestCreateUser",
+		Id: userId,
 	}
 	client.CreateUser(&testUser)
 	result := client.DeleteUser(testUser.Id)
 	assert.Nil(t, result)
 	users, _ := client.GetUsers()
 	for _, v := range users {
-		assert.False(t, v.Id == "TestCreateUser")
+		assert.False(t, v.Id == userId)
 	}
 }
 
 func TestUpdateUser(t *testing.T) {
 	client := getTestClient()
+	userId := randomTestSuffix("TestUpdateUser")
 	testUser := LldapUser{
-		Id:          "TestUpdateUser",
+		Id:          userId,
 		Email:       "TestUpdateUser@test.test",
 		DisplayName: "Test Update User",
 		FirstName:   "Test",
@@ -135,7 +156,7 @@ func TestUpdateUser(t *testing.T) {
 	testUser.LastName = "Last"
 	updateErr := client.UpdateUser(&testUser)
 	assert.Nil(t, updateErr)
-	user, _ := client.GetUser("TestUpdateUser")
+	user, _ := client.GetUser(userId)
 	assert.Equal(t, "test@newmail.test", user.Email)
 	assert.Equal(t, "Real Test User", user.DisplayName)
 	assert.Equal(t, "First", user.FirstName)
@@ -144,8 +165,9 @@ func TestUpdateUser(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	client := getTestClient()
+	userId := randomTestSuffix("TestDeleteUser")
 	testUser := LldapUser{
-		Id: "TestDeleteUser",
+		Id: userId,
 	}
 	client.CreateUser(&testUser)
 	result := client.DeleteUser(testUser.Id)
