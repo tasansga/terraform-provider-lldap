@@ -41,7 +41,7 @@ https://github.com/lldap/lldap/blob/main/scripts/bootstrap.sh
 	```
 */
 
-type LLdapClientQuery struct {
+type LldapClientQuery struct {
 	Query         string      `json:"query"`
 	OperationName string      `json:"operationName"`
 	Variables     interface{} `json:"variables"`
@@ -81,7 +81,7 @@ type LldapClient struct {
 	RefreshToken string
 }
 
-func (lc *LldapClient) query(query LLdapClientQuery) ([]byte, diag.Diagnostics) {
+func (lc *LldapClient) query(query LldapClientQuery) ([]byte, diag.Diagnostics) {
 	if lc.Token == "" {
 		authErr := lc.Authenticate()
 		if authErr != nil {
@@ -179,7 +179,7 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	type LldapGroupResponseData struct {
 		Group LldapGroup `json:"createGroup"`
 	}
-	query := LLdapClientQuery{
+	query := LldapClientQuery{
 		Query:         "mutation CreateGroup($name: String!) {createGroup(name: $name) {id displayName}}",
 		OperationName: "CreateGroup",
 		Variables: CreateGroupVariables{
@@ -222,7 +222,7 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 	type LldapGroupResponseData struct {
 		Group LldapGroup `json:"group"`
 	}
-	query := LLdapClientQuery{
+	query := LldapClientQuery{
 		Query:         "query GetGroupDetails($id: Int!) {group(groupId: $id) {id displayName creationDate users {id displayName}}}",
 		OperationName: "GetGroupDetails",
 		Variables: GetGroupVariables{
@@ -252,7 +252,7 @@ func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) d
 	type UpdateGroupDisplayNameVariables struct {
 		UpdateGroup UpdateGroupInput `json:"group"`
 	}
-	query := LLdapClientQuery{
+	query := LldapClientQuery{
 		Query:         "mutation UpdateGroup($group: UpdateGroupInput!) {updateGroup(group: $group) {ok}}",
 		OperationName: "UpdateGroup",
 		Variables: UpdateGroupDisplayNameVariables{
@@ -284,9 +284,22 @@ func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) d
 }
 
 func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
-	// {"query":"mutation DeleteGroupQuery($groupId: Int!) {deleteGroup(groupId: $groupId) {ok}}","operationName":"DeleteGroupQuery"}
+	type DeleteGroupVariables struct {
+		Id int `json:"id"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation DeleteGroupQuery($groupId: Int!) {deleteGroup(groupId: $groupId) {ok}}",
+		OperationName: "DeleteGroupQuery",
+		Variables: DeleteGroupVariables{
+			Id: id,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
 	// TODO
-	return diag.Errorf("Not implemented: DeleteGroup")
+	return diag.Errorf("Not implemented: DeleteGroup %s", string(response))
 }
 
 func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
@@ -302,7 +315,7 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 	type LldapUserResponseData struct {
 		User LldapUser `json:"user"`
 	}
-	query := LLdapClientQuery{
+	query := LldapClientQuery{
 		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate groups {id displayName}}}",
 		OperationName: "GetUserDetails",
 		Variables: GetUserVariables{
@@ -340,7 +353,7 @@ func (lc *LldapClient) GetGroups() ([]LldapGroup, diag.Diagnostics) {
 	type LldapGroupListResponseData struct {
 		Groups []LldapGroup `json:"groups"`
 	}
-	query := LLdapClientQuery{
+	query := LldapClientQuery{
 		Query:         "query GetGroupList {groups {id displayName creationDate}}",
 		OperationName: "GetGroupList",
 	}
@@ -363,7 +376,7 @@ func (lc *LldapClient) GetUsers() ([]LldapUser, diag.Diagnostics) {
 	type LldapUserListResponseData struct {
 		Users []LldapUser `json:"users"`
 	}
-	query := LLdapClientQuery{
+	query := LldapClientQuery{
 		Query:         "query ListUsersQuery($filters: RequestFilter) {users(filters: $filters) {id email displayName firstName lastName creationDate}}",
 		OperationName: "ListUsersQuery",
 	}
