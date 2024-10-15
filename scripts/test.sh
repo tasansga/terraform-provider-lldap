@@ -2,13 +2,6 @@
 
 set -eo pipefail
 
-if [[ -z ${MAKE_TERMOUT+x} ]]
-then
-    echo 'Do not call this script directly.'
-    echo 'Instead, use: `make test`'
-    exit 1
-fi
-
 function start_lldap_server {
     local passwd=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
     cnt_id=$(docker run \
@@ -20,6 +13,11 @@ function start_lldap_server {
 
     sleep 3 # Need to wait for the container to be ready
 
+    cat <<EOF
+export LLDAP_CONTAINER_ID="$cnt_id"
+export LLDAP_HOST="$cnt_ip"
+export LLDAP_PASSWORD="$passwd"
+EOF
     export LLDAP_CONTAINER_ID="$cnt_id"
     export LLDAP_HOST="$cnt_ip"
     export LLDAP_PASSWORD="$passwd"
@@ -27,6 +25,11 @@ function start_lldap_server {
 
 function stop_lldap_server {
     docker stop "$LLDAP_CONTAINER_ID" || true
+    cat <<EOF
+unset LLDAP_CONTAINER_ID
+unset LLDAP_HOST
+unset LLDAP_PASSWORD
+EOF
     unset LLDAP_CONTAINER_ID
     unset LLDAP_HOST
     unset LLDAP_PASSWORD
@@ -98,5 +101,17 @@ EOF
     done
 }
 
-run_unit_test
-run_integration_tests
+if [[ -z ${MAKE_TERMOUT+x} ]]
+then
+    if [[ -z ${LLDAP_CONTAINER_ID+x} ]]
+    then
+        echo "Starting LLDAP server..."
+        start_lldap_server
+    else
+        echo "Stopping LLDAP server..."
+        stop_lldap_server
+    fi
+else
+    run_unit_test
+    run_integration_tests
+fi
