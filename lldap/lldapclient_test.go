@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/exp/rand"
@@ -26,10 +27,11 @@ func getTestClient() LldapClient {
 }
 
 func randomTestSuffix(s string) string {
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	r := rand.New(rand.NewSource(uint64(time.Now().UnixNano())))
+	anums := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	b := make([]rune, 8)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = anums[r.Intn(len(anums))]
 	}
 	return fmt.Sprintf("%s-%s", s, string(b))
 }
@@ -127,11 +129,12 @@ func TestDeleteGroup(t *testing.T) {
 func TestCreateUser(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestCreateUser")
+	userEmail := randomTestSuffix("user@email")
 	testUser := LldapUser{
-		Id: userId,
+		Id:    userId,
+		Email: userEmail,
 	}
-	client.CreateUser(&testUser)
-	result := client.DeleteUser(testUser.Id)
+	result := client.CreateUser(&testUser)
 	assert.Nil(t, result)
 	users, _ := client.GetUsers()
 	for _, v := range users {
@@ -142,22 +145,24 @@ func TestCreateUser(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestUpdateUser")
+	userEmailI := randomTestSuffix("user@email.x")
+	userEmailE := randomTestSuffix("user@email.x")
 	testUser := LldapUser{
 		Id:          userId,
-		Email:       "TestUpdateUser@test.test",
+		Email:       userEmailI,
 		DisplayName: "Test Update User",
 		FirstName:   "Test",
 		LastName:    "User",
 	}
 	client.CreateUser(&testUser)
-	testUser.Email = "test@newmail.test"
+	testUser.Email = userEmailE
 	testUser.DisplayName = "Real Test User"
 	testUser.FirstName = "First"
 	testUser.LastName = "Last"
 	updateErr := client.UpdateUser(&testUser)
 	assert.Nil(t, updateErr)
 	user, _ := client.GetUser(userId)
-	assert.Equal(t, "test@newmail.test", user.Email)
+	assert.Equal(t, userEmailE, user.Email)
 	assert.Equal(t, "Real Test User", user.DisplayName)
 	assert.Equal(t, "First", user.FirstName)
 	assert.Equal(t, "Last", user.LastName)

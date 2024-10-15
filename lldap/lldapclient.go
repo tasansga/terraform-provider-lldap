@@ -316,9 +316,50 @@ func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
 }
 
 func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
-	// {"query":"mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate}}","operationName":"CreateUser"}
-	// TODO
-	return diag.Errorf("Not implemented: CreateUser")
+	type CreateUserInput struct {
+		Id          string `json:"id"`
+		DisplayName string `json:"displayName"`
+		Email       string `json:"email"`
+		FirstName   string `json:"firstName"`
+		LastName    string `json:"lastName"`
+	}
+	type CreateUserVariables struct {
+		CreateUserInput CreateUserInput `json:"user"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate}}",
+		OperationName: "CreateUser",
+		Variables: CreateUserVariables{
+			CreateUserInput: CreateUserInput{
+				Id:          user.Id,
+				DisplayName: user.DisplayName,
+				Email:       user.Email,
+				FirstName:   user.FirstName,
+				LastName:    user.LastName,
+			},
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	type LldapCreateUserResponseData struct {
+		Id           string `json:"id"`
+		CreationDate string `json:"creationDate"`
+	}
+	type LldapCreateUserResponse struct {
+		CreateUser LldapCreateUserResponseData `json:"createUser"`
+	}
+	createdUser := LldapClientResponse[LldapCreateUserResponse]{}
+	unmarshErr := json.Unmarshal(response, &createdUser)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if createdUser.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s (%s)", string(response), user.Id)
+	}
+	user.CreationDate = createdUser.Data.CreateUser.CreationDate
+	return nil
 }
 
 func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
