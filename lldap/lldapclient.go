@@ -58,6 +58,10 @@ type LldapClientResponse[T interface{}] struct {
 	Errors []LldapClientError `json:"errors"`
 }
 
+type LldapMutateOk struct {
+	OK bool `json:"ok"`
+}
+
 type LldapGroup struct {
 	Id           int         `json:"id"`
 	DisplayName  string      `json:"displayName"`
@@ -266,9 +270,6 @@ func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) d
 	if responseDiagErr != nil {
 		return responseDiagErr
 	}
-	type LldapMutateOk struct {
-		OK bool `json:"ok"`
-	}
 	type LldapUpdateGroupResponseData struct {
 		UpdateGroup LldapMutateOk `json:"updateGroup"`
 	}
@@ -297,9 +298,6 @@ func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
 	response, responseDiagErr := lc.query(query)
 	if responseDiagErr != nil {
 		return responseDiagErr
-	}
-	type LldapMutateOk struct {
-		OK bool `json:"ok"`
 	}
 	type LldapDeleteGroupResponseData struct {
 		DeleteGroup LldapMutateOk `json:"deleteGroup"`
@@ -392,9 +390,45 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 }
 
 func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
-	// {"query":"mutation UpdateUser($user: UpdateUserInput!) {updateUser(user: $user) {ok}}","operationName":"UpdateUser"}
-	// TODO
-	return diag.Errorf("Not implemented: UpdateUser")
+	type UpdateUserInput struct {
+		Id          string `json:"id"`
+		Email       string `json:"email"`
+		DisplayName string `json:"displayName"`
+		FirstName   string `json:"firstName"`
+		LastName    string `json:"lastName"`
+	}
+	type UpdateUserVariable struct {
+		UpdateUser UpdateUserInput `json:"user"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation UpdateUser($user: UpdateUserInput!) {updateUser(user: $user) {ok}}",
+		OperationName: "UpdateUser",
+		Variables: UpdateUserVariable{
+			UpdateUser: UpdateUserInput{
+				Id:          user.Id,
+				Email:       user.Email,
+				DisplayName: user.DisplayName,
+				FirstName:   user.FirstName,
+				LastName:    user.LastName,
+			},
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	type LldapUpdateUserResponseData struct {
+		UpdateUser LldapMutateOk `json:"updateUser"`
+	}
+	updateResponse := LldapClientResponse[LldapUpdateUserResponseData]{}
+	unmarshErr := json.Unmarshal(response, &updateResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if !updateResponse.Data.UpdateUser.OK {
+		return diag.Errorf("Failed to update user: %s", string(response))
+	}
+	return nil
 }
 
 func (lc *LldapClient) DeleteUser(id string) diag.Diagnostics {
