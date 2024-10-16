@@ -145,8 +145,8 @@ func TestCreateUser(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestUpdateUser")
-	userEmailI := randomTestSuffix("user@email.x")
-	userEmailE := randomTestSuffix("user@email.x")
+	userEmailI := randomTestSuffix("TestUpdateUser@email.x")
+	userEmailE := randomTestSuffix("TestUpdateUser@email.x")
 	testUser := LldapUser{
 		Id:          userId,
 		Email:       userEmailI,
@@ -171,8 +171,10 @@ func TestUpdateUser(t *testing.T) {
 func TestDeleteUser(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestDeleteUser")
+	email := randomTestSuffix("TestDeleteUser@email.x")
 	testUser := LldapUser{
-		Id: userId,
+		Id:    userId,
+		Email: email,
 	}
 	client.CreateUser(&testUser)
 	result := client.DeleteUser(testUser.Id)

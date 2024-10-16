@@ -278,6 +278,9 @@ func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) d
 	if unmarshErr != nil {
 		return diag.FromErr(unmarshErr)
 	}
+	if updateResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
 	if !updateResponse.Data.UpdateGroup.OK {
 		return diag.Errorf("Failed to update group display name: %s", string(response))
 	}
@@ -306,6 +309,9 @@ func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
 	unmarshErr := json.Unmarshal(response, &deleteResponse)
 	if unmarshErr != nil {
 		return diag.FromErr(unmarshErr)
+	}
+	if deleteResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
 	}
 	if !deleteResponse.Data.DeleteGroup.OK {
 		return diag.Errorf("Failed to delete group: %s", string(response))
@@ -425,6 +431,9 @@ func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
 	if unmarshErr != nil {
 		return diag.FromErr(unmarshErr)
 	}
+	if updateResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
 	if !updateResponse.Data.UpdateUser.OK {
 		return diag.Errorf("Failed to update user: %s", string(response))
 	}
@@ -432,9 +441,35 @@ func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
 }
 
 func (lc *LldapClient) DeleteUser(id string) diag.Diagnostics {
-	// {"query": "mutation DeleteUserQuery($user: String!) {deleteUser(userId: $user) {ok}}","operationName": "DeleteUserQuery"}
-	// TODO
-	return diag.Errorf("Not implemented: DeleteUser")
+	type DeleteUserVariable struct {
+		Id string `json:"user"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation DeleteUserQuery($user: String!) {deleteUser(userId: $user) {ok}}",
+		OperationName: "DeleteUserQuery",
+		Variables: DeleteUserVariable{
+			Id: id,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	type LldapDeleteUserResponseData struct {
+		DeleteUser LldapMutateOk `json:"deleteUser"`
+	}
+	deleteResponse := LldapClientResponse[LldapDeleteUserResponseData]{}
+	unmarshErr := json.Unmarshal(response, &deleteResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if deleteResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !deleteResponse.Data.DeleteUser.OK {
+		return diag.Errorf("Failed to delete user: %s", string(response))
+	}
+	return nil
 }
 
 func (lc *LldapClient) GetGroups() ([]LldapGroup, diag.Diagnostics) {
