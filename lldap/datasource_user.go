@@ -2,6 +2,7 @@ package lldap
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -15,6 +16,9 @@ func dataSourceUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The unique user ID",
+				StateFunc: func(val any) string {
+					return strings.ToLower(val.(string))
+				},
 			},
 			"email": {
 				Type:        schema.TypeString,

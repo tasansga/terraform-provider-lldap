@@ -165,22 +165,78 @@ func (lc *LldapClient) Authenticate() diag.Diagnostics {
 }
 
 func (lc *LldapClient) AddUserToGroup(groupId int, userId string) diag.Diagnostics {
-	// {"query":"mutation AddUserToGroup($user: String!, $group: Int!) {addUserToGroup(userId: $user, groupId: $group) {ok}}","operationName":"AddUserToGroup"}
-	// TODO
-	return diag.Errorf("Not implemented")
+	type AddUserToGroupVariables struct {
+		UserId  string `json:"user"`
+		GroupId int    `json:"group"`
+	}
+	type AddUserResponseData struct {
+		AddUserToGroup LldapMutateOk `json:"addUserToGroup"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation AddUserToGroup($user: String!, $group: Int!) {addUserToGroup(userId: $user, groupId: $group) {ok}}",
+		OperationName: "AddUserToGroup",
+		Variables: AddUserToGroupVariables{
+			UserId:  userId,
+			GroupId: groupId,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	addUserResponse := LldapClientResponse[AddUserResponseData]{}
+	unmarshErr := json.Unmarshal(response, &addUserResponse)
+	if unmarshErr != nil {
+		return diag.Errorf("Could not unmarshal response: %s", unmarshErr)
+	}
+	if addUserResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !addUserResponse.Data.AddUserToGroup.OK {
+		return diag.Errorf("Failed to add user to group: %s", string(response))
+	}
+	return nil
 }
 
 func (lc *LldapClient) RemoveUserFromGroup(groupId int, userId string) diag.Diagnostics {
-	// {"operationName":"RemoveUserFromGroup","query":"mutation RemoveUserFromGroup($user: String!, $group: Int!) {removeUserFromGroup(userId: $user, groupId: $group) {ok}}"}
-	// TODO
-	return diag.Errorf("Not implemented")
+	type RemoveUserFromGroupVariables struct {
+		UserId  string `json:"user"`
+		GroupId int    `json:"group"`
+	}
+	type RemoveUserResponseData struct {
+		RemoveUserFromGroup LldapMutateOk `json:"removeUserFromGroup"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation RemoveUserFromGroup($user: String!, $group: Int!) {removeUserFromGroup(userId: $user, groupId: $group) {ok}}",
+		OperationName: "RemoveUserFromGroup",
+		Variables: RemoveUserFromGroupVariables{
+			UserId:  userId,
+			GroupId: groupId,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	removeUserResponse := LldapClientResponse[RemoveUserResponseData]{}
+	unmarshErr := json.Unmarshal(response, &removeUserResponse)
+	if unmarshErr != nil {
+		return diag.Errorf("Could not unmarshal response: %s", unmarshErr)
+	}
+	if removeUserResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !removeUserResponse.Data.RemoveUserFromGroup.OK {
+		return diag.Errorf("Failed to add user to group: %s", string(response))
+	}
+	return nil
 }
 
 func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	type CreateGroupVariables struct {
 		Name string `json:"name"`
 	}
-	type LldapGroupResponseData struct {
+	type GroupResponseData struct {
 		Group LldapGroup `json:"createGroup"`
 	}
 	query := LldapClientQuery{
@@ -194,7 +250,7 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	if responseDiagErr != nil {
 		return responseDiagErr
 	}
-	newGroupResponse := LldapClientResponse[LldapGroupResponseData]{}
+	newGroupResponse := LldapClientResponse[GroupResponseData]{}
 	unmarshErr := json.Unmarshal(response, &newGroupResponse)
 	if unmarshErr != nil {
 		return diag.Errorf("Could not unmarshal response: %s", unmarshErr)

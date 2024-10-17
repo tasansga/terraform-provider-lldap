@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,7 +45,8 @@ func TestAddUserToGroup(t *testing.T) {
 	}
 	userId := randomTestSuffix("TestAddUserToGroup")
 	testUser := LldapUser{
-		Id: userId,
+		Id:    userId,
+		Email: randomTestSuffix("TestAddUserToGroupEmail"),
 	}
 	client.CreateGroup(&testGroup)
 	client.CreateUser(&testUser)
@@ -55,7 +57,7 @@ func TestAddUserToGroup(t *testing.T) {
 	for _, v := range group.Users {
 		users = append(users, v.Id)
 	}
-	assert.True(t, slices.Contains(users, userId))
+	assert.True(t, slices.Contains(users, strings.ToLower(userId)))
 }
 
 func TestRemoveUserFromGroup(t *testing.T) {
@@ -66,12 +68,14 @@ func TestRemoveUserFromGroup(t *testing.T) {
 	}
 	userId := randomTestSuffix("TestRemoveUserFromGroup")
 	testUser := LldapUser{
-		Id: userId,
+		Id:    userId,
+		Email: randomTestSuffix("TestRemoveUserFromGroupEmail"),
 	}
 	client.CreateGroup(&testGroup)
 	client.CreateUser(&testUser)
 	client.AddUserToGroup(testGroup.Id, testUser.Id)
-	client.RemoveUserFromGroup(testGroup.Id, testUser.Id)
+	response := client.RemoveUserFromGroup(testGroup.Id, testUser.Id)
+	assert.Nil(t, response)
 	group, _ := client.GetGroup(testGroup.Id)
 	users := make([]string, len(group.Users))
 	for _, v := range group.Users {
@@ -212,8 +216,11 @@ func TestGetUsers(t *testing.T) {
 	result, getErr := client.GetUsers()
 	assert.Nil(t, getErr)
 	assert.NotNil(t, result)
-	assert.Equal(t, 1, len(result))
-	assert.Equal(t, "Administrator", result[0].DisplayName)
+	userNames := make([]string, len(result))
+	for _, v := range result {
+		userNames = append(userNames, v.Id)
+	}
+	assert.True(t, slices.Contains(userNames, "admin"))
 }
 
 func TestGetGroup(t *testing.T) {
