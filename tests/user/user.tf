@@ -29,36 +29,20 @@ output "user1" {
   value = lldap_user.user1
 }
 
-/*
 resource "lldap_user" "user2" {
-  id           = "user2"
+  username     = "user2"
   display_name = "User 2"
   email        = "user2@this.test"
 }
 
-resource "lldap_user" "user3" {
-  id           = "user3"
-  display_name = "User 3"
-  email        = "user3@this.test"
-}
-
 data "lldap_users" "users" {
-  depends_on = [lldap_user.user1, lldap_user.user2, lldap_user.user3]
+  depends_on = [lldap_user.user1, lldap_user.user2]
 }
 
 output "user2" {
   value = lldap_user.user2
 }
 
-output "user3" {
-  value = lldap_user.user3
-}
-
-output "users" {
-  value = data.lldap_users.users
-}
-
 output "users_map" {
   value = { for user in data.lldap_users.users.users : user.id => user }
 }
-*/
