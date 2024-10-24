@@ -68,21 +68,8 @@ func resourceUser() *schema.Resource {
 	}
 }
 
-func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	user := LldapUser{
-		Id:          d.Get("username").(string),
-		Email:       d.Get("email").(string),
-		DisplayName: d.Get("display_name").(string),
-		FirstName:   d.Get("first_name").(string),
-		LastName:    d.Get("last_name").(string),
-	}
-	lc := m.(*LldapClient)
-	createErr := lc.CreateUser(&user)
-	if createErr != nil {
-		return createErr
-	}
-	d.SetId(user.Id)
-	for k, v := range map[string]string{
+func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.Diagnostics {
+	for k, v := range map[string]interface{}{
 		"username":      user.Id,
 		"email":         user.Email,
 		"display_name":  user.DisplayName,
@@ -97,9 +84,37 @@ func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	return nil
 }
 
+func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	user := LldapUser{
+		Id:          d.Get("username").(string),
+		Email:       d.Get("email").(string),
+		DisplayName: d.Get("display_name").(string),
+		FirstName:   d.Get("first_name").(string),
+		LastName:    d.Get("last_name").(string),
+	}
+	lc := m.(*LldapClient)
+	createErr := lc.CreateUser(&user)
+	if createErr != nil {
+		return createErr
+	}
+	d.SetId(user.Id)
+	setRdErr := resourceUserSetResourceData(d, &user)
+	if setRdErr != nil {
+		return setRdErr
+	}
+	return nil
+}
+
 func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
+	lc := m.(*LldapClient)
+	user, getUserErr := lc.GetUser(d.Id())
+	if getUserErr != nil {
+		return getUserErr
+	}
+	setRdErr := resourceUserSetResourceData(d, user)
+	if setRdErr != nil {
+		return setRdErr
+	}
 	return nil
 }
 

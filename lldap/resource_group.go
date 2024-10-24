@@ -49,6 +49,19 @@ func resourceGroup() *schema.Resource {
 	}
 }
 
+func resourceGroupSetResourceData(d *schema.ResourceData, group *LldapGroup) diag.Diagnostics {
+	for k, v := range map[string]interface{}{
+		"display_name":  group.DisplayName,
+		"creation_date": group.CreationDate,
+		"users":         resourceGroupUsersParser(group.Users),
+	} {
+		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
+	}
+	return nil
+}
+
 func resourceGroupUsersParser(llusers []LldapUser) *schema.Set {
 	result := make([]interface{}, len(llusers))
 	for i, lluser := range llusers {
@@ -67,13 +80,9 @@ func resourceGroupCreate(_ context.Context, d *schema.ResourceData, m any) diag.
 		return createErr
 	}
 	d.SetId(strconv.Itoa(group.Id))
-	for k, v := range map[string]string{
-		"display_name":  group.DisplayName,
-		"creation_date": *group.CreationDate,
-	} {
-		if setErr := d.Set(k, v); setErr != nil {
-			return diag.FromErr(setErr)
-		}
+	setRdErr := resourceGroupSetResourceData(d, &group)
+	if setRdErr != nil {
+		return setRdErr
 	}
 	return nil
 }
@@ -88,14 +97,9 @@ func resourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.Di
 	if getGroupErr != nil {
 		return getGroupErr
 	}
-	if setErr := d.Set("display_name", group.DisplayName); setErr != nil {
-		return diag.FromErr(setErr)
-	}
-	if setErr := d.Set("creation_date", group.CreationDate); setErr != nil {
-		return diag.FromErr(setErr)
-	}
-	if setErr := d.Set("users", resourceGroupUsersParser(group.Users)); setErr != nil {
-		return diag.FromErr(setErr)
+	setRdErr := resourceGroupSetResourceData(d, group)
+	if setRdErr != nil {
+		return setRdErr
 	}
 	return nil
 }
