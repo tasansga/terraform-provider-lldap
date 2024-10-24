@@ -23,7 +23,7 @@ func dataSourceUser() *schema.Resource {
 			"email": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The unique user ID",
+				Description: "The unique user email",
 			},
 			"display_name": {
 				Type:        schema.TypeString,

@@ -58,9 +58,8 @@ func resourceGroupUsersParser(llusers []LldapUser) *schema.Set {
 }
 
 func resourceGroupCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	displayName := d.Get("display_name").(string)
 	group := LldapGroup{
-		DisplayName: displayName,
+		DisplayName: d.Get("display_name").(string),
 	}
 	lc := m.(*LldapClient)
 	createErr := lc.CreateGroup(&group)
@@ -68,11 +67,13 @@ func resourceGroupCreate(_ context.Context, d *schema.ResourceData, m any) diag.
 		return createErr
 	}
 	d.SetId(strconv.Itoa(group.Id))
-	if setErr := d.Set("display_name", group.DisplayName); setErr != nil {
-		return diag.FromErr(setErr)
-	}
-	if setErr := d.Set("creation_date", group.CreationDate); setErr != nil {
-		return diag.FromErr(setErr)
+	for k, v := range map[string]string{
+		"display_name":  group.DisplayName,
+		"creation_date": *group.CreationDate,
+	} {
+		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
 	}
 	return nil
 }

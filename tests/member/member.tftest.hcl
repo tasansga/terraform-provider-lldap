@@ -6,6 +6,6 @@ run "test_member" {
             "user_id":"admin"
             "group_display_name":"Test member group",
         })
-        error_message = jsonencode(output.test)
+        error_message = "Member check failed"
     }
 }

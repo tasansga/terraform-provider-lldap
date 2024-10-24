@@ -17,13 +17,19 @@ provider "lldap" {
   lldap_password = var.lldap_password
 }
 
-/*
 resource "lldap_user" "user1" {
-  id           = "user1"
+  username     = "user1"
   display_name = "User 1"
   email        = "user1@this.test"
+  first_name   = "FIRST"
+  last_name    = "LAST"
 }
 
+output "user1" {
+  value = lldap_user.user1
+}
+
+/*
 resource "lldap_user" "user2" {
   id           = "user2"
   display_name = "User 2"
@@ -38,10 +44,6 @@ resource "lldap_user" "user3" {
 
 data "lldap_users" "users" {
   depends_on = [lldap_user.user1, lldap_user.user2, lldap_user.user3]
-}
-
-output "user1" {
-  value = lldap_user.user1
 }
 
 output "user2" {
