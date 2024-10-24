@@ -17,7 +17,6 @@ provider "lldap" {
   lldap_password = var.lldap_password
 }
 
-/*
 data "lldap_user" "admin" {
   id = "admin"
 }
@@ -34,5 +33,3 @@ resource "lldap_member" "test" {
 output "test" {
   value = lldap_member.test
 }
-
-*/

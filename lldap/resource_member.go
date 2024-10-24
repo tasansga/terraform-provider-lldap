@@ -3,19 +3,28 @@ package lldap
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const ResourceMemberIdSeparator = ":"
+
 func resourceMember() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceMemberCreate,
 		ReadContext:   resourceMemberRead,
-		UpdateContext: resourceMemberUpdate,
 		DeleteContext: resourceMemberDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+				id := d.Id()
+				_, _, found := strings.Cut(id, ResourceMemberIdSeparator)
+				if !found {
+					return nil, fmt.Errorf("not a valid member id: %s", id)
+				}
 				_ = d.Set("id", d.Id())
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
@@ -24,42 +33,91 @@ func resourceMember() *schema.Resource {
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "TODO: The member 'ID', something like group_id:user_id or whatever?",
+				Description: "The member 'ID', constructed as group_id:user_id",
 			},
 			"group_id": {
-				Type:        schema.TypeString,
+				Type:        schema.TypeInt,
 				Required:    true,
+				ForceNew:    true,
 				Description: "The unique group ID",
 			},
 			"user_id": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "The unique user ID",
+			},
+			"group_display_name": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Display name of this group",
 			},
 		},
 	}
 }
 
+func resourceMemberGetId(groupId int, userId string) string {
+	id := fmt.Sprintf("%d%s%s", groupId, ResourceMemberIdSeparator, userId)
+	return id
+}
+
 func resourceMemberCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceMemberCreate")
+	groupId := d.Get("group_id").(int)
+	userId := d.Get("user_id").(string)
+	id := resourceMemberGetId(groupId, userId)
+	lc := m.(*LldapClient)
+	createErr := lc.AddUserToGroup(groupId, userId)
+	if createErr != nil {
+		return createErr
+	}
+	group, getGroupErr := lc.GetGroup(groupId)
+	if getGroupErr != nil {
+		return getGroupErr
+	}
+	d.SetId(id)
+	if setErr := d.Set("group_display_name", group.DisplayName); setErr != nil {
+		return diag.FromErr(setErr)
+	}
+	return nil
 }
 
 func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceMemberRead")
-}
-
-func resourceMemberUpdate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceMemberUpdate")
+	groupIdStr, userId, found := strings.Cut(d.Id(), ResourceMemberIdSeparator)
+	if !found {
+		return diag.Errorf("missing separator '%s' - not a valid member id: %s", ResourceMemberIdSeparator, d.Id())
+	}
+	groupId, groupIdParseErr := strconv.Atoi(groupIdStr)
+	if groupIdParseErr != nil {
+		return diag.FromErr(groupIdParseErr)
+	}
+	lc := m.(*LldapClient)
+	group, getGroupErr := lc.GetGroup(groupId)
+	if getGroupErr != nil {
+		return getGroupErr
+	}
+	groupMembers := make([]string, len(group.Users))
+	for _, user := range group.Users {
+		groupMembers = append(groupMembers, user.Id)
+	}
+	if !slices.Contains(groupMembers, userId) {
+		return diag.Errorf("User not a member of group!")
+	}
+	return nil
 }
 
 func resourceMemberDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
-	return diag.Errorf("Not implemented: resourceMemberDelete")
+	groupIdStr, userId, found := strings.Cut(d.Id(), ResourceMemberIdSeparator)
+	if !found {
+		return diag.Errorf("missing separator '%s' - not a valid member id: %s", ResourceMemberIdSeparator, d.Id())
+	}
+	groupId, groupIdParseErr := strconv.Atoi(groupIdStr)
+	if groupIdParseErr != nil {
+		return diag.FromErr(groupIdParseErr)
+	}
+	lc := m.(*LldapClient)
+	removeErr := lc.RemoveUserFromGroup(groupId, userId)
+	if removeErr != nil {
+		return removeErr
+	}
+	return nil
 }

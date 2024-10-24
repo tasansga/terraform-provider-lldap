@@ -20,6 +20,7 @@ func resourceUser() *schema.Resource {
 			},
 		},
 		DeleteContext: resourceUserDelete,
+		// TODO: implement proper schema
 		Schema: map[string]*schema.Schema{
 			"last_updated": {
 				Type:     schema.TypeString,

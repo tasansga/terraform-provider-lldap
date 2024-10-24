@@ -48,7 +48,7 @@ func dataSourceUser() *schema.Resource {
 			"groups": {
 				Type:        schema.TypeSet,
 				Computed:    true,
-				Description: "Members of this group",
+				Description: "Groups where the user is a member",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -59,7 +59,7 @@ func dataSourceUser() *schema.Resource {
 						"display_name": {
 							Type:        schema.TypeString,
 							Computed:    true,
-							Description: "Display name of this group",
+							Description: "Display name of the group",
 						},
 					},
 				},
