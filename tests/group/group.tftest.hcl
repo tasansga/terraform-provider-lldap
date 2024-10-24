@@ -12,6 +12,10 @@ run "test_group" {
         error_message = "creation_date should not be null or empty string"
     }
     assert {
+        condition = output.test.uuid != null && output.test.uuid != ""
+        error_message = "uuid should not be null or empty string"
+    }
+    assert {
         condition = output.test.users != null
         error_message = "users should not be null"
     }

@@ -65,18 +65,19 @@ type LldapMutateOk struct {
 type LldapGroup struct {
 	Id           int         `json:"id"`
 	DisplayName  string      `json:"displayName"`
-	CreationDate *string     `json:"creationDate"`
+	CreationDate string      `json:"creationDate"`
+	Uuid         string      `json:"uuid"`
 	Users        []LldapUser `json:"users"`
 }
 
 type LldapUser struct {
 	Id           string       `json:"id"`
-	Uuid         string       `json:"uuid"`
 	Email        string       `json:"email"`
 	DisplayName  string       `json:"displayName"`
 	FirstName    string       `json:"firstName"`
 	LastName     string       `json:"lastName"`
 	CreationDate string       `json:"creationDate"`
+	Uuid         string       `json:"uuid"`
 	Groups       []LldapGroup `json:"groups"`
 }
 
@@ -241,7 +242,7 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 		Group LldapGroup `json:"createGroup"`
 	}
 	query := LldapClientQuery{
-		Query:         "mutation CreateGroup($name: String!) {createGroup(name: $name) {id displayName}}",
+		Query:         "mutation CreateGroup($name: String!) {createGroup(name: $name) {id displayName uuid}}",
 		OperationName: "CreateGroup",
 		Variables: CreateGroupVariables{
 			Name: group.DisplayName,
@@ -272,6 +273,7 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	group.Id = newGroupResponse.Data.Group.Id
 	group.CreationDate = getGroup.CreationDate
 	group.DisplayName = getGroup.DisplayName
+	group.Uuid = getGroup.Uuid
 	group.Users = getGroup.Users
 	return nil
 }
@@ -284,7 +286,7 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 		Group LldapGroup `json:"group"`
 	}
 	query := LldapClientQuery{
-		Query:         "query GetGroupDetails($id: Int!) {group(groupId: $id) {id displayName creationDate users {id displayName}}}",
+		Query:         "query GetGroupDetails($id: Int!) {group(groupId: $id) {id displayName creationDate uuid users {id displayName}}}",
 		OperationName: "GetGroupDetails",
 		Variables: GetGroupVariables{
 			Id: id,

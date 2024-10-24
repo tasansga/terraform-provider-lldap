@@ -37,6 +37,11 @@ func resourceGroup() *schema.Resource {
 				Optional:    true,
 				Description: "Metadata of group object creation",
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "UUID of group",
+			},
 			"users": {
 				Type:        schema.TypeSet,
 				Computed:    true,
@@ -53,6 +58,7 @@ func resourceGroupSetResourceData(d *schema.ResourceData, group *LldapGroup) dia
 	for k, v := range map[string]interface{}{
 		"display_name":  group.DisplayName,
 		"creation_date": group.CreationDate,
+		"uuid":          group.Uuid,
 		"users":         resourceGroupUsersParser(group.Users),
 	} {
 		if setErr := d.Set(k, v); setErr != nil {

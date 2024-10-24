@@ -93,8 +93,11 @@ func TestCreateGroup(t *testing.T) {
 	createErr := client.CreateGroup(&group)
 	assert.Nil(t, createErr)
 	assert.NotEqual(t, 0, group.Id)
+	assert.NotNil(t, group.Uuid)
+	assert.NotEmpty(t, group.Uuid)
 	assert.Equal(t, groupName, group.DisplayName)
 	assert.NotNil(t, group.DisplayName)
+	assert.NotEmpty(t, group.DisplayName)
 	assert.Equal(t, 0, len(group.Users))
 }
 
