@@ -2,7 +2,6 @@ package lldap
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -84,14 +83,18 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 	return nil
 }
 
-func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	user := LldapUser{
+func resourceUserGetResourceData(d *schema.ResourceData) LldapUser {
+	return LldapUser{
 		Id:          d.Get("username").(string),
 		Email:       d.Get("email").(string),
 		DisplayName: d.Get("display_name").(string),
 		FirstName:   d.Get("first_name").(string),
 		LastName:    d.Get("last_name").(string),
 	}
+}
+
+func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	user := resourceUserGetResourceData(d)
 	lc := m.(*LldapClient)
 	createErr := lc.CreateUser(&user)
 	if createErr != nil {
@@ -119,13 +122,20 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 }
 
 func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
+	lc := m.(*LldapClient)
+	user := resourceUserGetResourceData(d)
+	updateErr := lc.UpdateUser(&user)
+	if updateErr != nil {
+		return updateErr
+	}
 	return nil
 }
 
 func resourceUserDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	//lc := m.(*LldapClient)
-	fmt.Printf("ResourceData: %+v\n", d)
+	lc := m.(*LldapClient)
+	deleteErr := lc.DeleteUser(d.Id())
+	if deleteErr != nil {
+		return deleteErr
+	}
 	return nil
 }
