@@ -24,7 +24,7 @@ func resourceUser() *schema.Resource {
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID representing this specific user with email",
+				Description: "ID representing this specific user",
 			},
 			"username": {
 				Type:        schema.TypeString,
@@ -63,6 +63,11 @@ func resourceUser() *schema.Resource {
 				Computed:    true,
 				Description: "Metadata of user object creation",
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "UUID of user",
+			},
 		},
 	}
 }
@@ -75,6 +80,7 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 		"first_name":    user.FirstName,
 		"last_name":     user.LastName,
 		"creation_date": user.CreationDate,
+		"uuid":          user.Uuid,
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
 			return diag.FromErr(setErr)
@@ -90,6 +96,7 @@ func resourceUserGetResourceData(d *schema.ResourceData) LldapUser {
 		DisplayName: d.Get("display_name").(string),
 		FirstName:   d.Get("first_name").(string),
 		LastName:    d.Get("last_name").(string),
+		Uuid:        d.Get("uuid").(string),
 	}
 }
 

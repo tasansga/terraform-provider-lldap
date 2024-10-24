@@ -71,6 +71,7 @@ type LldapGroup struct {
 
 type LldapUser struct {
 	Id           string       `json:"id"`
+	Uuid         string       `json:"uuid"`
 	Email        string       `json:"email"`
 	DisplayName  string       `json:"displayName"`
 	FirstName    string       `json:"firstName"`
@@ -387,7 +388,7 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 		CreateUserInput CreateUserInput `json:"user"`
 	}
 	query := LldapClientQuery{
-		Query:         "mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate}}",
+		Query:         "mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate uuid}}",
 		OperationName: "CreateUser",
 		Variables: CreateUserVariables{
 			CreateUserInput: CreateUserInput{
@@ -406,6 +407,7 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 	type LldapCreateUserResponseData struct {
 		Id           string `json:"id"`
 		CreationDate string `json:"creationDate"`
+		Uuid         string `json:"uuid"`
 	}
 	type LldapCreateUserResponse struct {
 		CreateUser LldapCreateUserResponseData `json:"createUser"`
@@ -419,6 +421,7 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 		return diag.Errorf("GraphQL query returned error: %s (%s)", string(response), user.Id)
 	}
 	user.CreationDate = createdUser.Data.CreateUser.CreationDate
+	user.Uuid = createdUser.Data.CreateUser.Uuid
 	return nil
 }
 
@@ -430,7 +433,7 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 		User LldapUser `json:"user"`
 	}
 	query := LldapClientQuery{
-		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate groups {id displayName}}}",
+		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate uuid groups {id displayName}}}",
 		OperationName: "GetUserDetails",
 		Variables: GetUserVariables{
 			Id: id,
@@ -556,7 +559,7 @@ func (lc *LldapClient) GetUsers() ([]LldapUser, diag.Diagnostics) {
 		Users []LldapUser `json:"users"`
 	}
 	query := LldapClientQuery{
-		Query:         "query ListUsersQuery($filters: RequestFilter) {users(filters: $filters) {id email displayName firstName lastName creationDate}}",
+		Query:         "query ListUsersQuery($filters: RequestFilter) {users(filters: $filters) {id email displayName firstName lastName creationDate uuid}}",
 		OperationName: "ListUsersQuery",
 	}
 	response, responseDiagErr := lc.query(query)

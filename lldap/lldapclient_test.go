@@ -139,6 +139,8 @@ func TestCreateUser(t *testing.T) {
 		Email: userEmail,
 	}
 	result := client.CreateUser(&testUser)
+	assert.NotEmpty(t, testUser.CreationDate)
+	assert.NotEmpty(t, testUser.Uuid)
 	assert.Nil(t, result)
 	users, _ := client.GetUsers()
 	for _, v := range users {
@@ -165,7 +167,8 @@ func TestUpdateUser(t *testing.T) {
 	testUser.LastName = "Last"
 	updateErr := client.UpdateUser(&testUser)
 	assert.Nil(t, updateErr)
-	user, _ := client.GetUser(userId)
+	user, getUserErr := client.GetUser(userId)
+	assert.Nil(t, getUserErr)
 	assert.Equal(t, userEmailE, user.Email)
 	assert.Equal(t, "Real Test User", user.DisplayName)
 	assert.Equal(t, "First", user.FirstName)

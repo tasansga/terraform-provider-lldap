@@ -27,6 +27,10 @@ run "test_user" {
     condition     = output.user1.creation_date != null && output.user1.creation_date != ""
     error_message = "creation_date should not be null or empty string"
   }
+  assert {
+    condition     = output.user1.uuid != null && output.user1.uuid != ""
+    error_message = "uuid should not be null or empty string"
+  }
 }
 
 run "test_users_map" {
