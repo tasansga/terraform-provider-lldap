@@ -78,6 +78,7 @@ type LldapUser struct {
 	LastName     string       `json:"lastName"`
 	CreationDate string       `json:"creationDate"`
 	Uuid         string       `json:"uuid"`
+	Avatar       string       `json:"avatar"`
 	Groups       []LldapGroup `json:"groups"`
 }
 
@@ -385,12 +386,13 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 		Email       string `json:"email"`
 		FirstName   string `json:"firstName"`
 		LastName    string `json:"lastName"`
+		Avatar      string `json:"avatar"`
 	}
 	type CreateUserVariables struct {
 		CreateUserInput CreateUserInput `json:"user"`
 	}
 	query := LldapClientQuery{
-		Query:         "mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate uuid}}",
+		Query:         "mutation CreateUser($user: CreateUserInput!) {createUser(user: $user) {id creationDate uuid avatar}}",
 		OperationName: "CreateUser",
 		Variables: CreateUserVariables{
 			CreateUserInput: CreateUserInput{
@@ -399,6 +401,7 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 				Email:       user.Email,
 				FirstName:   user.FirstName,
 				LastName:    user.LastName,
+				Avatar:      user.Avatar,
 			},
 		},
 	}
@@ -435,7 +438,7 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 		User LldapUser `json:"user"`
 	}
 	query := LldapClientQuery{
-		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate uuid groups {id displayName}}}",
+		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate uuid avatar groups {id displayName}}}",
 		OperationName: "GetUserDetails",
 		Variables: GetUserVariables{
 			Id: id,
@@ -463,6 +466,7 @@ func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
 		DisplayName string `json:"displayName"`
 		FirstName   string `json:"firstName"`
 		LastName    string `json:"lastName"`
+		Avatar      string `json:"avatar"`
 	}
 	type UpdateUserVariable struct {
 		UpdateUser UpdateUserInput `json:"user"`
@@ -477,6 +481,7 @@ func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
 				DisplayName: user.DisplayName,
 				FirstName:   user.FirstName,
 				LastName:    user.LastName,
+				Avatar:      user.Avatar,
 			},
 		},
 	}
@@ -561,7 +566,7 @@ func (lc *LldapClient) GetUsers() ([]LldapUser, diag.Diagnostics) {
 		Users []LldapUser `json:"users"`
 	}
 	query := LldapClientQuery{
-		Query:         "query ListUsersQuery($filters: RequestFilter) {users(filters: $filters) {id email displayName firstName lastName creationDate uuid}}",
+		Query:         "query ListUsersQuery($filters: RequestFilter) {users(filters: $filters) {id email displayName firstName lastName creationDate uuid avatar}}",
 		OperationName: "ListUsersQuery",
 	}
 	response, responseDiagErr := lc.query(query)
@@ -577,4 +582,9 @@ func (lc *LldapClient) GetUsers() ([]LldapUser, diag.Diagnostics) {
 		return nil, diag.Errorf("GraphQL query returned error: %s", string(response))
 	}
 	return users.Data.Users, nil
+}
+
+func (lc *LldapClient) SetPassword(userId string, password string) {
+	// auth/opaque/register/start
+	// auth/opaque/register/finish
 }

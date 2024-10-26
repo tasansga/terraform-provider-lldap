@@ -25,6 +25,11 @@ func dataSourceUsers() *schema.Resource {
 							Required:    true,
 							Description: "The unique user ID",
 						},
+						"username": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The unique username",
+						},
 						"email": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -50,6 +55,16 @@ func dataSourceUsers() *schema.Resource {
 							Optional:    true,
 							Description: "Metadata of user object creation",
 						},
+						"uuid": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "UUID of user",
+						},
+						"avatar": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Base 64 encoded JPEG image",
+						},
 					},
 				},
 			},
@@ -59,11 +74,11 @@ func dataSourceUsers() *schema.Resource {
 
 func dataSourceUsersRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	lc := m.(*LldapClient)
-	llusers, getUsersErr := lc.GetUsers()
+	users, getUsersErr := lc.GetUsers()
 	if getUsersErr != nil {
 		return getUsersErr
 	}
-	hashBase, marshalErr := json.Marshal(llusers)
+	hashBase, marshalErr := json.Marshal(users)
 	if marshalErr != nil {
 		return diag.FromErr(marshalErr)
 	}
@@ -71,22 +86,25 @@ func dataSourceUsersRead(_ context.Context, d *schema.ResourceData, m any) diag.
 	hash.Write([]byte(hashBase))
 	hashString := hex.EncodeToString(hash.Sum(nil))
 	d.SetId(hashString)
-	if setErr := d.Set("users", dataSourceUsersParser(llusers)); setErr != nil {
+	if setErr := d.Set("users", dataSourceUsersParser(users)); setErr != nil {
 		return diag.Errorf("could not create user set: %s", setErr)
 	}
 	return nil
 }
 
-func dataSourceUsersParser(llusers []LldapUser) []map[string]any {
-	result := make([]map[string]any, len(llusers))
-	for i, lluser := range llusers {
+func dataSourceUsersParser(users []LldapUser) []map[string]any {
+	result := make([]map[string]any, len(users))
+	for i, user := range users {
 		user := map[string]any{
-			"id":            lluser.Id,
-			"email":         lluser.Email,
-			"display_name":  lluser.DisplayName,
-			"first_name":    lluser.FirstName,
-			"last_name":     lluser.LastName,
-			"creation_date": lluser.CreationDate,
+			"id":            user.Id,
+			"username":      user.Id,
+			"email":         user.Email,
+			"display_name":  user.DisplayName,
+			"first_name":    user.FirstName,
+			"last_name":     user.LastName,
+			"creation_date": user.CreationDate,
+			"uuid":          user.Uuid,
+			"avatar":        user.Avatar,
 		}
 		result[i] = user
 	}

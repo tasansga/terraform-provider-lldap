@@ -23,10 +23,15 @@ resource "lldap_user" "user1" {
   email        = "user1@this.test"
   first_name   = "FIRST"
   last_name    = "LAST"
+  avatar       = filebase64("${path.module}/test.jpeg")
 }
 
 output "user1" {
   value = lldap_user.user1
+}
+
+output "avatar_base64" {
+  value = filebase64("${path.module}/test.jpeg")
 }
 
 resource "lldap_user" "user2" {

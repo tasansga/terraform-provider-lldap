@@ -20,6 +20,11 @@ func dataSourceUser() *schema.Resource {
 					return strings.ToLower(val.(string))
 				},
 			},
+			"username": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The unique username",
+			},
 			"email": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -45,6 +50,16 @@ func dataSourceUser() *schema.Resource {
 				Computed:    true,
 				Description: "Metadata of user object creation",
 			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "UUID of user",
+			},
+			"avatar": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Base 64 encoded JPEG image",
+			},
 			"groups": {
 				Type:        schema.TypeSet,
 				Computed:    true,
@@ -68,36 +83,9 @@ func dataSourceUser() *schema.Resource {
 	}
 }
 
-func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	id := d.Get("id").(string)
-	lc := m.(*LldapClient)
-	lluser, getUserErr := lc.GetUser(id)
-	if getUserErr != nil {
-		return getUserErr
-	}
-	d.SetId(lluser.Id)
-	d.Set("email", lluser.Email)
-	if setErr := d.Set("display_name", lluser.DisplayName); setErr != nil {
-		return diag.Errorf("Could not set display_name: %s", setErr)
-	}
-	if setErr := d.Set("first_name", lluser.FirstName); setErr != nil {
-		return diag.Errorf("Could not set first_name: %s", setErr)
-	}
-	if setErr := d.Set("last_name", lluser.LastName); setErr != nil {
-		return diag.Errorf("Could not set last_name: %s", setErr)
-	}
-	if setErr := d.Set("creation_date", lluser.CreationDate); setErr != nil {
-		return diag.Errorf("Could not set creation_date: %s", setErr)
-	}
-	if setErr := d.Set("groups", dataSourceUserMembershipParser(lluser.Groups)); setErr != nil {
-		return diag.Errorf("Could not set groups: %s", setErr)
-	}
-	return nil
-}
-
-func dataSourceUserMembershipParser(llgroups []LldapGroup) []map[string]any {
-	result := make([]map[string]any, len(llgroups))
-	for i, llgroup := range llgroups {
+func dataSourceUserMembershipParser(groups []LldapGroup) []map[string]any {
+	result := make([]map[string]any, len(groups))
+	for i, llgroup := range groups {
 		group := map[string]any{
 			"id":           llgroup.Id,
 			"display_name": llgroup.DisplayName,
@@ -105,4 +93,30 @@ func dataSourceUserMembershipParser(llgroups []LldapGroup) []map[string]any {
 		result[i] = group
 	}
 	return result
+}
+
+func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	id := d.Get("id").(string)
+	lc := m.(*LldapClient)
+	user, getUserErr := lc.GetUser(id)
+	if getUserErr != nil {
+		return getUserErr
+	}
+	d.SetId(user.Id)
+	for k, v := range map[string]interface{}{
+		"username":      user.Id,
+		"email":         user.Email,
+		"display_name":  user.DisplayName,
+		"first_name":    user.FirstName,
+		"last_name":     user.LastName,
+		"creation_date": user.CreationDate,
+		"uuid":          user.Uuid,
+		"avatar":        user.Avatar,
+		"groups":        dataSourceUserMembershipParser(user.Groups),
+	} {
+		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
+	}
+	return nil
 }

@@ -58,6 +58,11 @@ func resourceUser() *schema.Resource {
 				Default:     "",
 				Description: "Last name of this user",
 			},
+			"avatar": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Base 64 encoded JPEG image",
+			},
 			"creation_date": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -81,6 +86,7 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 		"last_name":     user.LastName,
 		"creation_date": user.CreationDate,
 		"uuid":          user.Uuid,
+		"avatar":        user.Avatar,
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
 			return diag.FromErr(setErr)
@@ -97,6 +103,7 @@ func resourceUserGetResourceData(d *schema.ResourceData) LldapUser {
 		FirstName:   d.Get("first_name").(string),
 		LastName:    d.Get("last_name").(string),
 		Uuid:        d.Get("uuid").(string),
+		Avatar:      d.Get("avatar").(string),
 	}
 }
 

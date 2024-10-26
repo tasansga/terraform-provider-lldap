@@ -39,19 +39,23 @@ run "test_users_map" {
     error_message = "could not find users"
   }
   assert {
-    condition     = output.users_map["user1"]["display_name"] == "User 1"
+    condition     = output.users_map["user1"].display_name == "User 1"
     error_message = "user1 display name error"
   }
   assert {
-    condition     = output.users_map["user1"]["email"] == "user1@this.test"
+    condition     = output.users_map["user1"].email == "user1@this.test"
     error_message = "user1 email error"
   }
   assert {
-    condition     = output.users_map["user2"]["display_name"] == "User 2"
+    condition     = output.users_map["user2"].display_name == "User 2"
     error_message = "user2 display name error"
   }
   assert {
     condition     = output.users_map["user2"]["email"] == "user2@this.test"
     error_message = "user2 email error"
+  }
+  assert {
+    condition     = output.users_map["user1"].avatar == output.avatar_base64
+    error_message = "Invalid value for user avatar base64"
   }
 }

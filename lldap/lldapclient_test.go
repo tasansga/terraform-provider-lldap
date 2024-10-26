@@ -137,18 +137,35 @@ func TestCreateUser(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestCreateUser")
 	userEmail := randomTestSuffix("user@email")
+	avatar := "/9j/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wgALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAA//aAAgBAQAAAAE//9k="
 	testUser := LldapUser{
-		Id:    userId,
-		Email: userEmail,
+		Id:          userId,
+		Email:       userEmail,
+		FirstName:   "fname",
+		LastName:    "lname",
+		DisplayName: "dname",
+		Avatar:      avatar,
 	}
 	result := client.CreateUser(&testUser)
 	assert.NotEmpty(t, testUser.CreationDate)
 	assert.NotEmpty(t, testUser.Uuid)
 	assert.Nil(t, result)
+	assert.Equal(t, userEmail, testUser.Email)
+	assert.Equal(t, "fname", testUser.FirstName)
+	assert.Equal(t, "lname", testUser.LastName)
+	assert.Equal(t, "dname", testUser.DisplayName)
+	assert.Equal(t, avatar, testUser.Avatar)
 	users, _ := client.GetUsers()
 	for _, v := range users {
 		assert.False(t, v.Id == userId)
 	}
+	check, _ := client.GetUser(userId)
+	assert.Equal(t, strings.ToLower(userId), check.Id)
+	assert.Equal(t, userEmail, check.Email)
+	assert.Equal(t, "fname", check.FirstName)
+	assert.Equal(t, "lname", check.LastName)
+	assert.Equal(t, "dname", check.DisplayName)
+	assert.Equal(t, avatar, check.Avatar)
 }
 
 func TestUpdateUser(t *testing.T) {
