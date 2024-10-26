@@ -38,8 +38,9 @@ run "test_user" {
 }
 
 run "test_users_map" {
+  // Map is a data source so we need to retest the values from the resource
   assert {
-    condition     = length(keys(output.users_map)) == 3 // default "admin" plus our new two users"
+    condition     = length(keys(output.users_map)) == 3 // default "admin" plus our new two users
     error_message = "could not find users"
   }
   assert {
