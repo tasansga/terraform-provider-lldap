@@ -12,6 +12,10 @@ run "test_user" {
     error_message = "email should be 'user1@this.test'"
   }
   assert {
+    condition     = output.user1.avatar == output.avatar_base64
+    error_message = "invalid value for avatar base64"
+  }
+  assert {
     condition     = output.user1.display_name == "User 1"
     error_message = "display_name should be 'User 1'"
   }
@@ -53,6 +57,22 @@ run "test_users_map" {
   assert {
     condition     = output.users_map["user2"]["email"] == "user2@this.test"
     error_message = "user2 email error"
+  }
+  assert {
+    condition     = output.users_map["user1"].first_name == "FIRST"
+    error_message = "user1 first_name should be 'FIRST'"
+  }
+  assert {
+    condition     = output.users_map["user1"].last_name == "LAST"
+    error_message = "user1 last_name should be 'LAST'"
+  }
+  assert {
+    condition     = output.users_map["user1"].creation_date != null && output.users_map["user1"].creation_date != ""
+    error_message = "user1 creation_date should not be null or empty string"
+  }
+  assert {
+    condition     = output.users_map["user1"].uuid != null && output.users_map["user1"].uuid != ""
+    error_message = "user1 uuid should not be null or empty string"
   }
   assert {
     condition     = output.users_map["user1"].avatar == output.avatar_base64
