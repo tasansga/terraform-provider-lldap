@@ -5,14 +5,16 @@ $(info $(shell mkdir -p $(DIST_DIR)))
 
 default: all
 
-all: build test run
+all: lint build test run docs clean
 
 build:
 	go build -o "${DIST_DIR}/${BINARY_NAME}" main.go
 
-docs: deps
-	~/go/bin/tfplugindocs validate
-	~/go/bin/tfplugindocs generate
+lint:
+	~/go/bin/tfproviderlintx -R001=false ./...
+
+docs:
+	~/go/bin/tfplugindocs generate ./... 
 
 test: build
 	./scripts/test.sh
@@ -24,7 +26,3 @@ clean:
 	go clean
 	go mod tidy
 	rm -f "${DIST_DIR}/${BINARY_NAME}"
-
-deps:
-	go mod download
-	@cat tools/tools.go | grep _ | awk -F '"' '{print $$2}' | xargs -tI {} go install {}
