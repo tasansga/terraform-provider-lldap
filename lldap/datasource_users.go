@@ -20,50 +20,50 @@ func dataSourceUsers() *schema.Resource {
 				Description: "Set of all users",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The unique user ID",
-						},
-						"username": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "The unique username",
-						},
-						"email": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The unique user ID",
-						},
-						"display_name": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Display name of this user",
-						},
-						"first_name": {
+						"avatar": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "First name of this user",
-						},
-						"last_name": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Last name of this user",
+							Description: "Base 64 encoded JPEG image",
 						},
 						"creation_date": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Description: "Metadata of user object creation",
 						},
+						"display_name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Display name of this user",
+						},
+						"email": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The unique user ID",
+						},
+						"first_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "First name of this user",
+						},
+						"id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The unique user ID",
+						},
+						"last_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Last name of this user",
+						},
+						"username": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The unique username",
+						},
 						"uuid": {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Description: "UUID of user",
-						},
-						"avatar": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Base 64 encoded JPEG image",
 						},
 					},
 				},

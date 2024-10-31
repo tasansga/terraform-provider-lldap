@@ -11,11 +11,23 @@ import (
 func Provider() *schema.Provider {
 	provider := &schema.Provider{
 		Schema: map[string]*schema.Schema{
+			"base_dn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "dc=example,dc=com",
+				Description: "Base DN",
+			},
 			"http_url": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("LLDAP_HTTP_URL", nil),
 				Description: "HTTP URL in the format http[s]://(hostname)[:port]",
+			},
+			"insecure_skip_cert_check": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Disable check for valid certificate chain for https/ldaps",
 			},
 			"ldap_url": {
 				Type:        schema.TypeString,
@@ -23,29 +35,17 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("LLDAP_LDAP_URL", nil),
 				Description: "LDAP URL in the format ldap[s]://(hostname)[:port]",
 			},
-			"base_dn": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "dc=example,dc=com",
-				Description: "Base DN",
-			},
-			"username": {
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("LLDAP_USERNAME", nil),
-				Description: "admin account username",
-			},
 			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("LLDAP_PASSWORD", nil),
 				Description: "admin account password",
 			},
-			"insecure_skip_cert_check": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "Disable check for valid certificate chain for https/ldaps",
+			"username": {
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("LLDAP_USERNAME", nil),
+				Description: "admin account username",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{

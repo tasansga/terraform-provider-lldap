@@ -21,26 +21,21 @@ func resourceGroup() *schema.Resource {
 			},
 		},
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The unique group ID",
-			},
-			"display_name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Display name of this group",
-			},
 			"creation_date": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Optional:    true,
 				Description: "Metadata of group object creation",
 			},
-			"uuid": {
+			"display_name": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Display name of this group",
+			},
+			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "UUID of group",
+				Description: "The unique group ID",
 			},
 			"users": {
 				Type:        schema.TypeSet,
@@ -49,6 +44,11 @@ func resourceGroup() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"uuid": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "UUID of group",
 			},
 		},
 	}

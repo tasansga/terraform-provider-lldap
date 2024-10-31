@@ -21,49 +21,6 @@ func resourceUser() *schema.Resource {
 		},
 		DeleteContext: resourceUserDelete,
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID representing this specific user",
-			},
-			"username": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The unique username",
-				StateFunc: func(val any) string {
-					return strings.ToLower(val.(string))
-				},
-			},
-			"email": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The unique user email",
-			},
-			"password": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				Description: "Password for the user",
-			},
-			"display_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "Display name of this user",
-			},
-			"first_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "First name of this user",
-			},
-			"last_name": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
-				Description: "Last name of this user",
-			},
 			"avatar": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -73,6 +30,49 @@ func resourceUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Metadata of user object creation",
+			},
+			"display_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "Display name of this user",
+			},
+			"email": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The unique user email",
+			},
+			"first_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "First name of this user",
+			},
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID representing this specific user",
+			},
+			"last_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "Last name of this user",
+			},
+			"password": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Password for the user",
+			},
+			"username": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The unique username",
+				StateFunc: func(val any) string {
+					return strings.ToLower(val.(string))
+				},
 			},
 			"uuid": {
 				Type:        schema.TypeString,

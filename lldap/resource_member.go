@@ -30,10 +30,10 @@ func resourceMember() *schema.Resource {
 			},
 		},
 		Schema: map[string]*schema.Schema{
-			"id": {
+			"group_display_name": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The member 'ID', constructed as group_id:user_id",
+				Description: "Display name of this group",
 			},
 			"group_id": {
 				Type:        schema.TypeInt,
@@ -41,16 +41,16 @@ func resourceMember() *schema.Resource {
 				ForceNew:    true,
 				Description: "The unique group ID",
 			},
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The member 'ID', constructed as group_id:user_id",
+			},
 			"user_id": {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
 				Description: "The unique user ID",
-			},
-			"group_display_name": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Display name of this group",
 			},
 		},
 	}

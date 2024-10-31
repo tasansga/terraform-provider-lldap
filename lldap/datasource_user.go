@@ -12,6 +12,50 @@ func dataSourceUser() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceUserRead,
 		Schema: map[string]*schema.Schema{
+			"avatar": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Base 64 encoded JPEG image",
+			},
+			"creation_date": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Metadata of user object creation",
+			},
+			"display_name": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Display name of this user",
+			},
+			"email": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The unique user email",
+			},
+			"first_name": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "First name of this user",
+			},
+			"groups": {
+				Type:        schema.TypeSet,
+				Computed:    true,
+				Description: "Groups where the user is a member",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"display_name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Display name of the group",
+						},
+						"id": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "The unique group ID",
+						},
+					},
+				},
+			},
 			"id": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -20,64 +64,20 @@ func dataSourceUser() *schema.Resource {
 					return strings.ToLower(val.(string))
 				},
 			},
-			"username": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The unique username",
-			},
-			"email": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The unique user email",
-			},
-			"display_name": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Display name of this user",
-			},
-			"first_name": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "First name of this user",
-			},
 			"last_name": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Last name of this user",
 			},
-			"creation_date": {
+			"username": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Metadata of user object creation",
+				Description: "The unique username",
 			},
 			"uuid": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "UUID of user",
-			},
-			"avatar": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Base 64 encoded JPEG image",
-			},
-			"groups": {
-				Type:        schema.TypeSet,
-				Computed:    true,
-				Description: "Groups where the user is a member",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:        schema.TypeInt,
-							Computed:    true,
-							Description: "The unique group ID",
-						},
-						"display_name": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "Display name of the group",
-						},
-					},
-				},
 			},
 		},
 	}

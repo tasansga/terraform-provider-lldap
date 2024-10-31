@@ -12,20 +12,20 @@ func dataSourceGroup() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceGroupRead,
 		Schema: map[string]*schema.Schema{
-			"id": {
-				Type:        schema.TypeInt,
-				Required:    true,
-				Description: "The unique group ID",
+			"creation_date": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Metadata of group object creation",
 			},
 			"display_name": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Display name of this group",
 			},
-			"creation_date": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Metadata of group object creation",
+			"id": {
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "The unique group ID",
 			},
 			"users": {
 				Type:        schema.TypeSet,
@@ -33,15 +33,15 @@ func dataSourceGroup() *schema.Resource {
 				Description: "Members of this group",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "The unique user ID",
-						},
 						"display_name": {
 							Type:        schema.TypeString,
 							Computed:    true,
 							Description: "Display name of this user",
+						},
+						"id": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The unique user ID",
 						},
 					},
 				},
