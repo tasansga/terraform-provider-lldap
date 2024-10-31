@@ -7,45 +7,60 @@ terraform {
   }
 }
 
-variable "lldap_url" {}
+variable "lldap_http_url" {}
+variable "lldap_ldap_url" {}
 variable "lldap_username" {}
 variable "lldap_password" {}
+variable "lldap_base_dn" {}
 
 provider "lldap" {
-  lldap_url      = var.lldap_url
-  lldap_username = var.lldap_username
-  lldap_password = var.lldap_password
+  http_url = var.lldap_http_url
+  ldap_url = var.lldap_ldap_url
+  username = var.lldap_username
+  password = var.lldap_password
+  base_dn  = var.lldap_base_dn
 }
 
-resource "lldap_user" "user1" {
-  username     = "user1"
-  display_name = "User 1"
-  email        = "user1@this.test"
-  first_name   = "FIRST"
-  last_name    = "LAST"
+locals {
+  user_count = 20
+}
+
+resource "random_password" "user" {
+  count  = local.user_count
+  length = 16
+}
+
+output "user_count" {
+  value = local.user_count
+}
+
+resource "lldap_user" "user" {
+  for_each     = { for k, v in random_password.user : k => v.result }
+  username     = "user${each.key}"
+  email        = "user${each.key}@this.test"
+  password     = each.value
+  display_name = "User ${each.key}"
+  first_name   = "FIRST ${each.key}"
+  last_name    = "LAST ${each.key}"
   avatar       = filebase64("${path.module}/test.jpeg")
 }
 
-output "user1" {
-  value = lldap_user.user1
+output "user" {
+  value     = lldap_user.user
+  sensitive = true
+}
+
+output "user_password" {
+  value     = [for k, v in random_password.user : v.result]
+  sensitive = true
 }
 
 output "avatar_base64" {
   value = filebase64("${path.module}/test.jpeg")
 }
 
-resource "lldap_user" "user2" {
-  username     = "user2"
-  display_name = "User 2"
-  email        = "user2@this.test"
-}
-
 data "lldap_users" "users" {
-  depends_on = [lldap_user.user1, lldap_user.user2]
-}
-
-output "user2" {
-  value = lldap_user.user2
+  depends_on = [lldap_user.user]
 }
 
 output "users_map" {

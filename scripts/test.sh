@@ -2,25 +2,105 @@
 
 set -eo pipefail
 
-function start_lldap_server {
+readonly DATABASE="postgres"
+
+function wait_for_service {
+    local host="$1"
+    local port="$2"
+    echo "waiting for ${host}:${port}..."
+    while true
+    do
+        sleep 1
+        nc -z "$host" "$port" && break
+    done
+}
+
+function start_postgres_server {
     local passwd=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
-    cnt_id=$(docker run \
+    postgres_cnt_id=$(docker run \
         --detach \
         --rm \
-        --env "LLDAP_LDAP_USER_PASS=${passwd}" \
-        lldap/lldap:stable)
-    local cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$cnt_id")
+        --env "POSTGRES_DB=lldap" \
+        --env "POSTGRES_USER=postgres" \
+        --env "POSTGRES_PASSWORD=${passwd}" \
+        postgres:latest)
+    local postgres_cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$postgres_cnt_id")
 
-    sleep 3 # Need to wait for the container to be ready
+    if [[ "$DEBUG" == "true" ]]
+    then
+        docker logs -f "$postgres_cnt_id" &
+    fi
+
+    wait_for_service "$postgres_cnt_ip" 5432
 
     cat <<EOF
-export LLDAP_CONTAINER_ID="$cnt_id"
-export LLDAP_HOST="$cnt_ip"
+export POSTGRES_CONTAINER_ID="$postgres_cnt_id"
+export POSTGRES_HOST="$postgres_cnt_ip"
+export POSTGRES_PASSWORD="$passwd"
+EOF
+    export POSTGRES_CONTAINER_ID="$postgres_cnt_id"
+    export POSTGRES_HOST="$postgres_cnt_ip"
+    export POSTGRES_PASSWORD="$passwd"
+}
+
+function start_lldap_server {
+    local passwd=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    local lldap_cnt_id
+    if [[ "$DATABASE" == "postgres" ]]
+    then
+        database_url="postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/lldap"
+        lldap_cnt_id=$(docker run \
+            --detach \
+            --rm \
+            --env "LLDAP_DATABASE_URL=${database_url}" \
+            --env "LLDAP_LDAP_USER_PASS=${passwd}" \
+            --env "LLDAP_LDAP_BASE_DN=dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com" \
+            lldap/lldap:latest)
+    else
+        lldap_cnt_id=$(docker run \
+            --detach \
+            --rm \
+            --env "LLDAP_LDAP_USER_PASS=${passwd}" \
+            --env "LLDAP_LDAP_BASE_DN=dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com" \
+            lldap/lldap:latest)
+    fi
+    local lldap_cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$lldap_cnt_id")
+
+    if [[ "$DEBUG" == "true" ]]
+    then
+        docker logs -f "$lldap_cnt_id" &
+    fi
+
+    wait_for_service "$lldap_cnt_ip" 17170
+
+    cat <<EOF
+export LLDAP_CONTAINER_ID="$lldap_cnt_id"
+export LLDAP_HOST="$lldap_cnt_ip"
 export LLDAP_PASSWORD="$passwd"
 EOF
-    export LLDAP_CONTAINER_ID="$cnt_id"
-    export LLDAP_HOST="$cnt_ip"
+    export LLDAP_CONTAINER_ID="$lldap_cnt_id"
+    export LLDAP_HOST="$lldap_cnt_ip"
     export LLDAP_PASSWORD="$passwd"
+}
+
+function start_server {
+    if [[ "$DATABASE" == "postgres" ]]
+    then
+        start_postgres_server
+    fi
+    start_lldap_server
+}
+
+function stop_postgres_server {
+    docker stop "$POSTGRES_CONTAINER_ID" || true
+    cat <<EOF
+unset POSTGRES_CONTAINER_ID
+unset POSTGRES_HOST
+unset POSTGRES_PASSWORD
+EOF
+    unset POSTGRES_CONTAINER_ID
+    unset POSTGRES_HOST
+    unset POSTGRES_PASSWORD
 }
 
 function stop_lldap_server {
@@ -35,27 +115,37 @@ EOF
     unset LLDAP_PASSWORD
 }
 
+function stop_server {
+    if [[ "$DATABASE" == "postgres" ]]
+    then
+        stop_postgres_server
+    fi
+    stop_lldap_server
+}
+
 function run_unit_test {
-    start_lldap_server
-    trap stop_lldap_server RETURN
-    trap stop_lldap_server EXIT
+    start_server
+    trap stop_server RETURN
+    trap stop_server EXIT
 
     go test ./lldap
 }
 
 function run_integration_test {
     local test_path="$1"
-    start_lldap_server
-    trap stop_lldap_server RETURN
-    trap stop_lldap_server EXIT
+    start_server
+    trap stop_server RETURN
+    trap stop_server EXIT
 
     echo "Running test: ${test_path}"
     cd "$test_path"
     rm -Rvf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
     cat > "$test_path/.tfvars" << EOF
-lldap_url="http://${LLDAP_HOST}:17170"
+lldap_http_url="http://${LLDAP_HOST}:17170"
+lldap_ldap_url="ldap://${LLDAP_HOST}:3890"
 lldap_username="admin"
 lldap_password="$LLDAP_PASSWORD"
+lldap_base_dn="dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com"
 EOF
     tofu init -reconfigure -upgrade
     tofu test -var-file="$test_path/.tfvars"
@@ -105,11 +195,11 @@ if [[ -z ${MAKE_TERMOUT+x} ]]
 then
     if [[ -z ${LLDAP_CONTAINER_ID+x} ]]
     then
-        echo "Starting LLDAP server..."
-        start_lldap_server
+        echo "Starting LLDAP server... (set DEBUG=true for logs)"
+        start_server
     else
         echo "Stopping LLDAP server..."
-        stop_lldap_server
+        stop_server
     fi
 else
     run_unit_test

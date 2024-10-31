@@ -1,38 +1,42 @@
 run "test_user" {
   assert {
-    condition     = output.user1.id == "user1"
-    error_message = "id should be 'user1'"
+    condition     = output.user[0].id == "user0"
+    error_message = "id should be 'user0'"
   }
   assert {
-    condition     = output.user1.username == "user1"
-    error_message = "username should be 'user1'"
+    condition     = output.user[0].username == "user0"
+    error_message = "username should be 'user0'"
   }
   assert {
-    condition     = output.user1.email == "user1@this.test"
-    error_message = "email should be 'user1@this.test'"
+    condition     = output.user_password[0] == output.user[0].password
+    error_message = "password mapping failed"
   }
   assert {
-    condition     = output.user1.avatar == output.avatar_base64
+    condition     = output.user[0].email == "user0@this.test"
+    error_message = "email should be 'user0@this.test'"
+  }
+  assert {
+    condition     = output.user[0].avatar == output.avatar_base64
     error_message = "invalid value for avatar base64"
   }
   assert {
-    condition     = output.user1.display_name == "User 1"
-    error_message = "display_name should be 'User 1'"
+    condition     = output.user[0].display_name == "User 0"
+    error_message = "display_name should be 'User 0'"
   }
   assert {
-    condition     = output.user1.first_name == "FIRST"
-    error_message = "first_name should be 'FIRST'"
+    condition     = output.user[0].first_name == "FIRST 0"
+    error_message = "first_name should be 'FIRST 0'"
   }
   assert {
-    condition     = output.user1.last_name == "LAST"
-    error_message = "last_name should be 'LAST'"
+    condition     = output.user[0].last_name == "LAST 0"
+    error_message = "last_name should be 'LAST 0'"
   }
   assert {
-    condition     = output.user1.creation_date != null && output.user1.creation_date != ""
+    condition     = output.user[0].creation_date != null && output.user[0].creation_date != ""
     error_message = "creation_date should not be null or empty string"
   }
   assert {
-    condition     = output.user1.uuid != null && output.user1.uuid != ""
+    condition     = output.user[0].uuid != null && output.user[0].uuid != ""
     error_message = "uuid should not be null or empty string"
   }
 }
@@ -40,7 +44,7 @@ run "test_user" {
 run "test_users_map" {
   // Map is a data source so we need to retest the values from the resource
   assert {
-    condition     = length(keys(output.users_map)) == 3 // default "admin" plus our new two users
+    condition     = length(keys(output.users_map)) == 1 + local.user_count // default "admin" plus our new users
     error_message = "could not find users"
   }
   assert {
@@ -60,12 +64,16 @@ run "test_users_map" {
     error_message = "user2 email error"
   }
   assert {
-    condition     = output.users_map["user1"].first_name == "FIRST"
-    error_message = "user1 first_name should be 'FIRST'"
+    condition     = output.users_map["user1"].username == "user1"
+    error_message = "username should be 'user1'"
   }
   assert {
-    condition     = output.users_map["user1"].last_name == "LAST"
-    error_message = "user1 last_name should be 'LAST'"
+    condition     = output.users_map["user1"].first_name == "FIRST 1"
+    error_message = "user1 first_name should be 'FIRST 1'"
+  }
+  assert {
+    condition     = output.users_map["user1"].last_name == "LAST 1"
+    error_message = "user1 last_name should be 'LAST 1'"
   }
   assert {
     condition     = output.users_map["user1"].creation_date != null && output.users_map["user1"].creation_date != ""
