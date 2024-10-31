@@ -98,12 +98,12 @@ type LldapClient struct {
 func getLdapBindConnection(ldapUrl string, baseDn string, username string, password string) (*ldap.Conn, diag.Diagnostics) {
 	ldapclient, dialErr := ldap.DialURL(ldapUrl, ldap.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}))
 	if dialErr != nil {
-		return nil, diag.FromErr(fmt.Errorf("unable to dial ldap url: %s", dialErr))
+		return nil, diag.Errorf("unable to dial ldap url: %s", dialErr)
 	}
 	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeFilter(username), baseDn)
 	bindErr := ldapclient.Bind(userDn, password)
 	if bindErr != nil {
-		return nil, diag.FromErr(fmt.Errorf("could not bind to ldap server: %s", bindErr))
+		return nil, diag.Errorf("could not bind to ldap server: %s", bindErr)
 	}
 	return ldapclient, nil
 }
@@ -135,7 +135,7 @@ func (lc *LldapClient) SetUserPassword(username string, newPassword string) diag
 		NewPassword:  newPassword,
 	})
 	if modifyErr != nil {
-		return diag.FromErr(fmt.Errorf("unable to modify password for '%s': %s", userDn, modifyErr))
+		return diag.Errorf("unable to modify password for '%s': %s", userDn, modifyErr)
 	}
 	return nil
 }
