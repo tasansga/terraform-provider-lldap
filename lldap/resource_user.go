@@ -40,6 +40,12 @@ func resourceUser() *schema.Resource {
 				Required:    true,
 				Description: "The unique user email",
 			},
+			"password": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Password for the user",
+			},
 			"display_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -81,6 +87,7 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 	for k, v := range map[string]interface{}{
 		"username":      user.Id,
 		"email":         user.Email,
+		"password":      user.Password,
 		"display_name":  user.DisplayName,
 		"first_name":    user.FirstName,
 		"last_name":     user.LastName,
@@ -99,6 +106,7 @@ func resourceUserGetResourceData(d *schema.ResourceData) LldapUser {
 	return LldapUser{
 		Id:          d.Get("username").(string),
 		Email:       d.Get("email").(string),
+		Password:    d.Get("password").(string),
 		DisplayName: d.Get("display_name").(string),
 		FirstName:   d.Get("first_name").(string),
 		LastName:    d.Get("last_name").(string),
@@ -114,6 +122,10 @@ func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	if createErr != nil {
 		return createErr
 	}
+	setPwErr := lc.SetUserPassword(user.Id, user.Password)
+	if setPwErr != nil {
+		return setPwErr
+	}
 	d.SetId(user.Id)
 	setRdErr := resourceUserSetResourceData(d, &user)
 	if setRdErr != nil {
@@ -128,6 +140,14 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 	if getUserErr != nil {
 		return getUserErr
 	}
+	password := d.Get("password").(string)
+	isValidPassword, bindErr := lc.IsValidPassword(user.Id, password)
+	if bindErr != nil {
+		return bindErr
+	}
+	if isValidPassword {
+		user.Password = password
+	}
 	setRdErr := resourceUserSetResourceData(d, user)
 	if setRdErr != nil {
 		return setRdErr
@@ -141,6 +161,16 @@ func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	updateErr := lc.UpdateUser(&user)
 	if updateErr != nil {
 		return updateErr
+	}
+	isValidPassword, bindErr := lc.IsValidPassword(user.Id, user.Password)
+	if bindErr != nil {
+		return bindErr
+	}
+	if !isValidPassword {
+		setPwErr := lc.SetUserPassword(user.Id, user.Password)
+		if setPwErr != nil {
+			return setPwErr
+		}
 	}
 	return nil
 }

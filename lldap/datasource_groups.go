@@ -15,6 +15,10 @@ func dataSourceGroups() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceGroupsRead,
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"groups": {
 				Type:        schema.TypeSet,
 				Computed:    true,

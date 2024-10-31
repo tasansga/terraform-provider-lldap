@@ -1,6 +1,7 @@
 package lldap
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -16,12 +17,16 @@ import (
 func getTestClient() LldapClient {
 	hostIp := os.Getenv("LLDAP_HOST")
 	password := os.Getenv("LLDAP_PASSWORD")
-	parsedUrl, _ := url.Parse(fmt.Sprintf("http://%s:17170", hostIp))
+	parsedHttpUrl, _ := url.Parse(fmt.Sprintf("http://%s:17170", hostIp))
+	parsedLdapUrl, _ := url.Parse(fmt.Sprintf("ldap://%s:3890", hostIp))
 	client := LldapClient{
-		Config: &Config{
-			Url:      parsedUrl,
+		Config: Config{
+			Context:  context.Background(),
+			HttpUrl:  parsedHttpUrl,
+			LdapUrl:  parsedLdapUrl,
 			UserName: "admin",
 			Password: password,
+			BaseDn:   "dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com",
 		},
 	}
 	return client
@@ -35,6 +40,41 @@ func randomTestSuffix(s string) string {
 		b[i] = anums[r.Intn(len(anums))]
 	}
 	return fmt.Sprintf("%s-%s", s, string(b))
+}
+
+func TestSetUserPassword(t *testing.T) {
+	client := getTestClient()
+	userId := randomTestSuffix("TestSetUserPassword")
+	testUser := LldapUser{
+		Id:    userId,
+		Email: randomTestSuffix("TestSetUserPasswordEmail"),
+	}
+	client.CreateUser(&testUser)
+	newPassword := randomTestSuffix("TestSetUserPasswordNewPassword")
+	result := client.SetUserPassword(strings.ToLower(userId), newPassword)
+	assert.Nil(t, result)
+	bind, bindErr := client.IsValidPassword(userId, newPassword)
+	assert.Nil(t, bindErr)
+	assert.NotNil(t, bind)
+}
+
+func TestSetUserPasswords(t *testing.T) {
+	client := getTestClient()
+	// Tests concurrency for ldap:// works as expected
+	for i := range 20 {
+		userId := randomTestSuffix(fmt.Sprintf("TestSetUserPasswords%d", i))
+		testUser := LldapUser{
+			Id:    userId,
+			Email: randomTestSuffix(fmt.Sprintf("TestSetUserPasswordsEmail%d", i)),
+		}
+		client.CreateUser(&testUser)
+		newPassword := randomTestSuffix(fmt.Sprintf("TestSetUserPasswordsPassword%d", i))
+		result := client.SetUserPassword(strings.ToLower(userId), newPassword)
+		assert.Nil(t, result)
+		bind, bindErr := client.IsValidPassword(userId, newPassword)
+		assert.Nil(t, bindErr)
+		assert.NotNil(t, bind)
+	}
 }
 
 func TestAddUserToGroup(t *testing.T) {
@@ -99,6 +139,26 @@ func TestCreateGroup(t *testing.T) {
 	assert.NotNil(t, group.DisplayName)
 	assert.NotEmpty(t, group.DisplayName)
 	assert.Equal(t, 0, len(group.Users))
+}
+
+func TestCreateGroups(t *testing.T) {
+	client := getTestClient()
+	// Tests concurrency for http:// works as expected
+	for i := range 20 {
+		groupName := randomTestSuffix(fmt.Sprintf("TestCreateGroup%d", i))
+		group := LldapGroup{
+			DisplayName: groupName,
+		}
+		createErr := client.CreateGroup(&group)
+		assert.Nil(t, createErr)
+		assert.NotEqual(t, 0, group.Id)
+		assert.NotNil(t, group.Uuid)
+		assert.NotEmpty(t, group.Uuid)
+		assert.Equal(t, groupName, group.DisplayName)
+		assert.NotNil(t, group.DisplayName)
+		assert.NotEmpty(t, group.DisplayName)
+		assert.Equal(t, 0, len(group.Users))
+	}
 }
 
 func TestUpdateGroupDisplayName(t *testing.T) {

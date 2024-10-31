@@ -1,13 +1,17 @@
 package lldap
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 )
 
@@ -72,6 +76,7 @@ type LldapGroup struct {
 
 type LldapUser struct {
 	Id           string       `json:"id"`
+	Password     string       `json:"password"`
 	Email        string       `json:"email"`
 	DisplayName  string       `json:"displayName"`
 	FirstName    string       `json:"firstName"`
@@ -83,9 +88,56 @@ type LldapUser struct {
 }
 
 type LldapClient struct {
-	Config       *Config
+	Config       Config
 	Token        string
 	RefreshToken string
+	HttpClient   *http.Client
+	LdapClient   *ldap.Conn
+}
+
+func getLdapBindConnection(ldapUrl string, baseDn string, username string, password string) (*ldap.Conn, diag.Diagnostics) {
+	ldapclient, dialErr := ldap.DialURL(ldapUrl, ldap.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}))
+	if dialErr != nil {
+		return nil, diag.FromErr(fmt.Errorf("unable to dial ldap url: %s", dialErr))
+	}
+	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeFilter(username), baseDn)
+	bindErr := ldapclient.Bind(userDn, password)
+	if bindErr != nil {
+		return nil, diag.FromErr(fmt.Errorf("could not bind to ldap server: %s", bindErr))
+	}
+	return ldapclient, nil
+}
+
+func (lc *LldapClient) IsValidPassword(username string, password string) (bool, diag.Diagnostics) {
+	bind, bindErr := getLdapBindConnection(lc.Config.LdapUrl.String(), lc.Config.BaseDn, username, password)
+	if bindErr != nil {
+		if strings.Contains(bindErr[len(bindErr)-1].Summary, "Invalid Credentials") {
+			return false, nil
+		} else {
+			return false, bindErr
+		}
+	}
+	defer bind.Close()
+	return true, nil
+}
+
+func (lc *LldapClient) SetUserPassword(username string, newPassword string) diag.Diagnostics {
+	if lc.LdapClient == nil {
+		ldapclient, bindErr := getLdapBindConnection(lc.Config.LdapUrl.String(), lc.Config.BaseDn, lc.Config.UserName, lc.Config.Password)
+		if bindErr != nil {
+			return bindErr
+		}
+		lc.LdapClient = ldapclient
+	}
+	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeFilter(username), lc.Config.BaseDn)
+	_, modifyErr := lc.LdapClient.PasswordModify(&ldap.PasswordModifyRequest{
+		UserIdentity: userDn,
+		NewPassword:  newPassword,
+	})
+	if modifyErr != nil {
+		return diag.FromErr(fmt.Errorf("unable to modify password for '%s': %s", userDn, modifyErr))
+	}
+	return nil
 }
 
 func (lc *LldapClient) query(query LldapClientQuery) ([]byte, diag.Diagnostics) {
@@ -100,14 +152,14 @@ func (lc *LldapClient) query(query LldapClientQuery) ([]byte, diag.Diagnostics) 
 		return nil, diag.FromErr(marshErr)
 	}
 	ref, _ := url.Parse("/api/graphql")
-	graphQlApiUrl := lc.Config.Url.ResolveReference(ref)
+	graphQlApiUrl := lc.Config.HttpUrl.ResolveReference(ref)
 	req, reqErr := http.NewRequest("POST", graphQlApiUrl.String(), strings.NewReader(string(queryJson)))
 	if reqErr != nil {
 		return nil, diag.FromErr(reqErr)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", lc.Token))
-	resp, respErr := http.DefaultClient.Do(req)
+	resp, respErr := lc.HttpClient.Do(req)
 	if respErr != nil {
 		return nil, diag.FromErr(respErr)
 	}
@@ -123,6 +175,12 @@ func (lc *LldapClient) query(query LldapClientQuery) ([]byte, diag.Diagnostics) 
 }
 
 func (lc *LldapClient) Authenticate() diag.Diagnostics {
+	if lc.HttpClient == nil {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: lc.Config.InsecureSkipCertCheck},
+		}
+		lc.HttpClient = &http.Client{Transport: tr}
+	}
 	type AuthBody struct {
 		UserName string `json:"username"`
 		Password string `json:"password"`
@@ -139,13 +197,13 @@ func (lc *LldapClient) Authenticate() diag.Diagnostics {
 		return diag.FromErr(marshErr)
 	}
 	ref, _ := url.Parse("/auth/simple/login")
-	authSimpleUrl := lc.Config.Url.ResolveReference(ref)
+	authSimpleUrl := lc.Config.HttpUrl.ResolveReference(ref)
 	req, reqErr := http.NewRequest("POST", authSimpleUrl.String(), strings.NewReader(string(authBody)))
 	if reqErr != nil {
 		return diag.FromErr(reqErr)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, respErr := http.DefaultClient.Do(req)
+	resp, respErr := lc.HttpClient.Do(req)
 	if respErr != nil {
 		return diag.FromErr(respErr)
 	}
@@ -582,9 +640,4 @@ func (lc *LldapClient) GetUsers() ([]LldapUser, diag.Diagnostics) {
 		return nil, diag.Errorf("GraphQL query returned error: %s", string(response))
 	}
 	return users.Data.Users, nil
-}
-
-func (lc *LldapClient) SetPassword(userId string, password string) {
-	// auth/opaque/register/start
-	// auth/opaque/register/finish
 }

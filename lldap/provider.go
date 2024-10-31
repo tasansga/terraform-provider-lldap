@@ -11,23 +11,41 @@ import (
 func Provider() *schema.Provider {
 	provider := &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"lldap_url": {
+			"http_url": {
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("LLDAP_URL", nil),
-				Description: "LLDAP URL in the format http[s]://(hostname)[:port]",
+				DefaultFunc: schema.EnvDefaultFunc("LLDAP_HTTP_URL", nil),
+				Description: "HTTP URL in the format http[s]://(hostname)[:port]",
 			},
-			"lldap_username": {
+			"ldap_url": {
+				Type:        schema.TypeString,
+				Required:    true,
+				DefaultFunc: schema.EnvDefaultFunc("LLDAP_LDAP_URL", nil),
+				Description: "LDAP URL in the format ldap[s]://(hostname)[:port]",
+			},
+			"base_dn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "dc=example,dc=com",
+				Description: "Base DN",
+			},
+			"username": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("LLDAP_USERNAME", nil),
-				Description: "LLDAP admin account username",
+				Description: "admin account username",
 			},
-			"lldap_password": {
+			"password": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("LLDAP_PASSWORD", nil),
-				Description: "LLDAP admin account password",
+				Description: "admin account password",
+			},
+			"insecure_skip_cert_check": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Disable check for valid certificate chain for https/ldaps",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -43,25 +61,34 @@ func Provider() *schema.Provider {
 		},
 	}
 
-	provider.ConfigureContextFunc = func(_ context.Context, d *schema.ResourceData) (any, diag.Diagnostics) {
-		rawUrl := d.Get("lldap_url").(string)
-		parsedUrl, parseUrlErr := url.Parse(rawUrl)
-		if parseUrlErr != nil {
-			return nil, diag.FromErr(parseUrlErr)
+	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (any, diag.Diagnostics) {
+		rawHttpUrl := d.Get("http_url").(string)
+		parsedHttpUrl, parseHttpUrlErr := url.Parse(rawHttpUrl)
+		if parseHttpUrlErr != nil {
+			return nil, diag.FromErr(parseHttpUrlErr)
 		}
-		if parsedUrl.Scheme != "http" && parsedUrl.Scheme != "https" {
-			return nil, diag.Errorf("Invalid LLDAP URL: '%s'", rawUrl)
+		if parsedHttpUrl.Scheme != "http" && parsedHttpUrl.Scheme != "https" {
+			return nil, diag.Errorf("Invalid LLDAP HTTP URL: '%s'", rawHttpUrl)
 		}
-		config := Config{
-			Url:      parsedUrl,
-			UserName: d.Get("lldap_username").(string),
-			Password: d.Get("lldap_password").(string),
+		rawLdapUrl := d.Get("ldap_url").(string)
+		parsedLdapUrl, parseLdapUrlErr := url.Parse(rawLdapUrl)
+		if parseLdapUrlErr != nil {
+			return nil, diag.FromErr(parseLdapUrlErr)
 		}
-		client, getClientErr := config.Client()
-		if getClientErr != nil {
-			return nil, getClientErr
+		if parsedLdapUrl.Scheme != "ldap" && parsedLdapUrl.Scheme != "ldaps" {
+			return nil, diag.Errorf("Invalid LLDAP LDAP URL: '%s'", rawLdapUrl)
 		}
-		return client, nil
+		client := LldapClient{
+			Config: Config{
+				Context:  ctx,
+				HttpUrl:  parsedHttpUrl,
+				LdapUrl:  parsedLdapUrl,
+				UserName: d.Get("username").(string),
+				Password: d.Get("password").(string),
+				BaseDn:   d.Get("base_dn").(string),
+			},
+		}
+		return &client, nil
 	}
 
 	return provider
