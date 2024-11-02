@@ -14,7 +14,7 @@ lint:
 	~/go/bin/tfproviderlintx -R001=false ./...
 
 docs:
-	~/go/bin/tfplugindocs generate ./... 
+	~/go/bin/tfplugindocs generate
 
 test: build
 	./scripts/test.sh
@@ -26,3 +26,5 @@ clean:
 	go clean
 	go mod tidy
 	rm -f "${DIST_DIR}/${BINARY_NAME}"
+
+.PHONY: all lint build test run debug docs clean

@@ -24,7 +24,6 @@ func resourceGroup() *schema.Resource {
 			"creation_date": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Optional:    true,
 				Description: "Metadata of group object creation",
 			},
 			"display_name": {
