@@ -30,8 +30,7 @@ archives:
         format: zip
 
 changelog:
-  use: gitea
-  sort: asc
+  use: github
 
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
