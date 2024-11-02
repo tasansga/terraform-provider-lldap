@@ -1,0 +1,21 @@
+---
+page_title: "lldap Provider"
+subcategory: ""
+description: |-
+  Provider to manage the lifecycle for lldap groups, users and memberships
+---
+
+# lldap Provider
+
+Provider to manage the lifecycle for lldap groups, users and memberships
+
+## Security
+
+Note that the [password modify extended operation](https://datatracker.ietf.org/doc/html/rfc3062) which is used to set/change passwords sends these in clear over the wire, so make sure to use the `ldaps` protocol and not `ldap`!
+
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}

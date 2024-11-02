@@ -151,6 +151,10 @@ lldap_username="admin"
 lldap_password="$LLDAP_PASSWORD"
 lldap_base_dn="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
 EOF
+    export LLDAP_HTTP_URL="http://${LLDAP_HOST}:17170"
+    export LLDAP_LDAP_URL="ldap://${LLDAP_HOST}:3890"
+    export LLDAP_USERNAME="admin"
+    export LLDAP_PASSWORD="$LLDAP_PASSWORD"
     tofu init -reconfigure -upgrade
     tofu test -var-file="$test_path/.tfvars"
 }
