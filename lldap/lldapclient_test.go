@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package lldap
 
 import (
@@ -26,7 +32,7 @@ func getTestClient() LldapClient {
 			LdapUrl:  parsedLdapUrl,
 			UserName: "admin",
 			Password: password,
-			BaseDn:   "dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com",
+			BaseDn:   "dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com",
 		},
 	}
 	return client

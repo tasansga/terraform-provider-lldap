@@ -1,4 +1,4 @@
-module github.com/tasansga/tf-provider-lldap
+module github.com/tasansga/terraform-provider-lldap
 
 go 1.23
 

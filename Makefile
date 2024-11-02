@@ -1,4 +1,4 @@
-BINARY_NAME=tf-provider-lldap
+BINARY_NAME=terraform-provider-lldap
 DIST_DIR=dist
 
 $(info $(shell mkdir -p $(DIST_DIR)))

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 set -eo pipefail
 
 readonly DATABASE="postgres"
@@ -54,14 +58,14 @@ function start_lldap_server {
             --rm \
             --env "LLDAP_DATABASE_URL=${database_url}" \
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
-            --env "LLDAP_LDAP_BASE_DN=dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com" \
+            --env "LLDAP_LDAP_BASE_DN=dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
             lldap/lldap:latest)
     else
         lldap_cnt_id=$(docker run \
             --detach \
             --rm \
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
-            --env "LLDAP_LDAP_BASE_DN=dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com" \
+            --env "LLDAP_LDAP_BASE_DN=dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
             lldap/lldap:latest)
     fi
     local lldap_cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$lldap_cnt_id")
@@ -145,7 +149,7 @@ lldap_http_url="http://${LLDAP_HOST}:17170"
 lldap_ldap_url="ldap://${LLDAP_HOST}:3890"
 lldap_username="admin"
 lldap_password="$LLDAP_PASSWORD"
-lldap_base_dn="dc=tf-provider-lldap,dc=tasansga,dc=github,dc=com"
+lldap_base_dn="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
 EOF
     tofu init -reconfigure -upgrade
     tofu test -var-file="$test_path/.tfvars"
@@ -167,7 +171,7 @@ function run_integration_tests {
 
     cd "${tf_provider_lldap_root_dir}"
     mkdir -p "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/"
-    cp "${tf_provider_lldap_root_dir}/dist/tf-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/terraform-provider-lldap"
+    cp "${tf_provider_lldap_root_dir}/dist/terraform-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/terraform-provider-lldap"
 
     export TF_CLI_CONFIG_FILE="${temp_test_dir}/test.tfrc"
     cat > "$TF_CLI_CONFIG_FILE" << EOF
