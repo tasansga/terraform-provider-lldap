@@ -38,13 +38,7 @@ checksum:
 signs:
   - artifacts: checksum
     output: true
-    stdin: "{{ .Env.GPG_PASSWORD }}"
     args:
-      - "--pinentry-mode"
-      - "loopback"
-      - "--batch"
-      - "-u"
-      - "{{ .Env.GPG_FINGERPRINT }}"
       - "--output"
       - "${signature}"
       - "--detach-sign"
