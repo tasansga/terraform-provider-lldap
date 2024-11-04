@@ -1,0 +1,24 @@
+name: PR checker
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pr-checker:
+    name: PR checker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
