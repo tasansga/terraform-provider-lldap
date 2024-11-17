@@ -1,17 +1,15 @@
 # terraform-provider-lldap
 
-Welcome to this inofficial terraform provider for [lldap](https://github.com/lldap/lldap/)!
+Welcome to this unofficial terraform provider for [LLDAP](https://github.com/lldap/lldap/)!
 
-You can find it in the [terraform registry](https://registry.terraform.io/providers/tasansga/lldap/).
+You can find it in the [terraform registry](https://registry.terraform.io/providers/tasansga/lldap/) and in the [OpenTofu registry](https://search.opentofu.org/provider/tasansga/lldap/latest).
 
 [Homepage on GitHub](https://github.com/tasansga/terraform-provider-lldap)
 
 
 ## Features
 
-User, group and membership lifecycle management works and most attributes can be defined in their respective resource. Passwords can be set and changed (but not read).
-
-Custom attributes are currently not supported.
+User, group and membership lifecycle management works and most attributes can be defined in their respective resource. Passwords can be set and changed (but not read). Custom attributes are supported as well.
 
 
 ## Usage
@@ -27,10 +25,10 @@ Works for me with:
 - Go 1.23
 - GNU make 4.4
 - Bash 5
-- lldap 0.5
+- LLDAP 0.6.0
 - Docker 27.3
 
-The client uses mostly the [lldap GraphQL API](https://github.com/lldap/lldap/blob/main/docs/scripting.md) (see also the [schema](https://github.com/lldap/lldap/blob/main/schema.graphql)).
+The client uses mostly the [LLDAP GraphQL API](https://github.com/lldap/lldap/blob/main/docs/scripting.md) (see also the [schema](https://github.com/lldap/lldap/blob/main/schema.graphql)).
 
 Password changes use the [password modify extended operation](https://datatracker.ietf.org/doc/html/rfc3062).
 
