@@ -125,11 +125,36 @@ func TestGetGroupAttributesSchema(t *testing.T) {
 }
 
 func TestCreateGroupAttribute(t *testing.T) {
-	assert.Fail(t, "not implemented")
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestCreateGroupAttribute"))
+	createAttrErr := client.CreateGroupAttribute(attrName, "STRING", false, true)
+	assert.Nil(t, createAttrErr)
+	groupAttrSchema, _ := client.GetGroupAttributesSchema()
+	hasNewGroupAttr := false
+	for _, gs := range groupAttrSchema {
+		if gs.Name == attrName {
+			hasNewGroupAttr = true
+			assert.Equal(t, false, gs.IsList)
+			assert.Equal(t, true, gs.IsVisible)
+		}
+	}
+	assert.True(t, hasNewGroupAttr)
 }
 
 func TestDeleteGroupAttribute(t *testing.T) {
-	assert.Fail(t, "not implemented")
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestDeleteGroupAttribute"))
+	client.CreateGroupAttribute(attrName, "STRING", false, true)
+	delErr := client.DeleteGroupAttribute(attrName)
+	assert.Nil(t, delErr)
+	groupAttrSchema, _ := client.GetGroupAttributesSchema()
+	hasNewGroupAttr := false
+	for _, gs := range groupAttrSchema {
+		if gs.Name == attrName {
+			hasNewGroupAttr = true
+		}
+	}
+	assert.False(t, hasNewGroupAttr)
 }
 
 func TestGetUserAttributesSchema(t *testing.T) {
@@ -214,11 +239,37 @@ func TestGetUserAttributesSchema(t *testing.T) {
 }
 
 func TestCreateUserAttribute(t *testing.T) {
-	assert.Fail(t, "not implemented")
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestCreateUserAttribute"))
+	createAttrErr := client.CreateUserAttribute(attrName, "STRING", false, true, false)
+	assert.Nil(t, createAttrErr)
+	userAttrSchema, _ := client.GetUserAttributesSchema()
+	hasNewUserAttr := false
+	for _, us := range userAttrSchema {
+		if us.Name == attrName {
+			hasNewUserAttr = true
+			assert.Equal(t, false, us.IsList)
+			assert.Equal(t, true, us.IsVisible)
+			assert.Equal(t, false, us.IsEditable)
+		}
+	}
+	assert.True(t, hasNewUserAttr)
 }
 
 func TestDeleteUserAttribute(t *testing.T) {
-	assert.Fail(t, "not implemented")
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestDeleteUserAttribute"))
+	client.CreateUserAttribute(attrName, "STRING", false, true, false)
+	delErr := client.DeleteUserAttribute(attrName)
+	assert.Nil(t, delErr)
+	UserAttrSchema, _ := client.GetUserAttributesSchema()
+	hasNewUserAttr := false
+	for _, gs := range UserAttrSchema {
+		if gs.Name == attrName {
+			hasNewUserAttr = true
+		}
+	}
+	assert.False(t, hasNewUserAttr)
 }
 
 func TestAddUserToGroup(t *testing.T) {
