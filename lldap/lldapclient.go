@@ -77,23 +77,25 @@ type LldapCustomAttribute struct {
 	Value []string `json:"value"`
 }
 
+type LldapCustomAttributeType string
+
 type LldapGroupAttributeSchema struct {
-	Name          string `json:"name"`
-	AttributeType string `json:"attributeType"`
-	IsList        bool   `json:"isList"`
-	IsVisible     bool   `json:"isVisible"`
-	IsHardcoded   bool   `json:"isHardcoded"`
-	IsReadonly    bool   `json:"isReadonly"`
+	Name          string                   `json:"name"`
+	AttributeType LldapCustomAttributeType `json:"attributeType"`
+	IsList        bool                     `json:"isList"`
+	IsVisible     bool                     `json:"isVisible"`
+	IsHardcoded   bool                     `json:"isHardcoded"`
+	IsReadonly    bool                     `json:"isReadonly"`
 }
 
 type LldapUserAttributeSchema struct {
-	Name          string `json:"name"`
-	AttributeType string `json:"attributeType"`
-	IsList        bool   `json:"isList"`
-	IsVisible     bool   `json:"isVisible"`
-	IsEditable    bool   `json:"isEditable"`
-	IsHardcoded   bool   `json:"isHardcoded"`
-	IsReadonly    bool   `json:"isReadonly"`
+	Name          string                   `json:"name"`
+	AttributeType LldapCustomAttributeType `json:"attributeType"`
+	IsList        bool                     `json:"isList"`
+	IsVisible     bool                     `json:"isVisible"`
+	IsEditable    bool                     `json:"isEditable"`
+	IsHardcoded   bool                     `json:"isHardcoded"`
+	IsReadonly    bool                     `json:"isReadonly"`
 }
 
 type LldapGroup struct {
@@ -286,25 +288,78 @@ func (lc *LldapClient) GetGroupAttributesSchema() ([]LldapGroupAttributeSchema, 
 	return schema.Data.Schema.GroupSchema.Attributes, nil
 }
 
-func (lc *LldapClient) CreateGroupAttribute(schema LldapGroupAttributeSchema) diag.Diagnostics {
-	/*
-		mutation CreateGroupAttribute($name: String!, $attributeType: AttributeType!, $isList: Boolean!, $isVisible: Boolean!) {
-		    addGroupAttribute(name: $name, attributeType: $attributeType, isList: $isList, isVisible: $isVisible, isEditable: false) {
-		        ok
-		    }
-		}
-	*/
+func (lc *LldapClient) CreateGroupAttribute(
+	name string,
+	attributeType LldapCustomAttributeType,
+	isList bool,
+	isVisible bool,
+) diag.Diagnostics {
+	type CreateGroupAttributeVariables struct {
+		Name          string                   `json:"name"`
+		AttributeType LldapCustomAttributeType `json:"attributeType"`
+		IsList        bool                     `json:"isList"`
+		IsVisible     bool                     `json:"isVisible"`
+	}
+	type CreateGroupAttributeResponseData struct {
+		AddGroupAttribute LldapMutateOk `json:"addGroupAttribute"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation CreateGroupAttribute($name: String!, $attributeType: AttributeType!, $isList: Boolean!, $isVisible: Boolean!) { addGroupAttribute(name: $name, attributeType: $attributeType, isList: $isList, isVisible: $isVisible, isEditable: false) { ok } }",
+		OperationName: "CreateGroupAttribute",
+		Variables: CreateGroupAttributeVariables{
+			Name:          name,
+			AttributeType: attributeType,
+			IsList:        isList,
+			IsVisible:     isVisible,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	createResponse := LldapClientResponse[CreateGroupAttributeResponseData]{}
+	unmarshErr := json.Unmarshal(response, &createResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if createResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !createResponse.Data.AddGroupAttribute.OK {
+		return diag.Errorf("Failed to create group attribute: %s", string(response))
+	}
 	return nil
 }
 
 func (lc *LldapClient) DeleteGroupAttribute(name string) diag.Diagnostics {
-	/*
-		mutation DeleteGroupAttributeQuery($name: String!) {
-		    deleteGroupAttribute(name: $name) {
-		        ok
-		    }
-		}
-	*/
+	type DeleteGroupAttributeVariable struct {
+		Name string `json:"name"`
+	}
+	type DeleteGroupAttributeResponseData struct {
+		DeleteGroupAttribute LldapMutateOk `json:"deleteGroupAttribute"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation DeleteGroupAttributeQuery($name: String!) { deleteGroupAttribute(name: $name) { ok } }",
+		OperationName: "DeleteGroupAttributeQuery",
+		Variables: DeleteGroupAttributeVariable{
+			Name: name,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	deleteResponse := LldapClientResponse[DeleteGroupAttributeResponseData]{}
+	unmarshErr := json.Unmarshal(response, &deleteResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if deleteResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !deleteResponse.Data.DeleteGroupAttribute.OK {
+		return diag.Errorf("Failed to delete group attribute: %s", string(response))
+	}
 	return nil
 }
 
@@ -337,25 +392,81 @@ func (lc *LldapClient) GetUserAttributesSchema() ([]LldapUserAttributeSchema, di
 	return schema.Data.Schema.UserSchema.Attributes, nil
 }
 
-func (lc *LldapClient) CreateUserAttribute(schema LldapUserAttributeSchema) diag.Diagnostics {
-	/*
-		mutation CreateUserAttribute($name: String!, $attributeType: AttributeType!, $isList: Boolean!, $isVisible: Boolean!, $isEditable: Boolean!) {
-		    addUserAttribute(name: $name, attributeType: $attributeType, isList: $isList, isVisible: $isVisible, isEditable: $isEditable) {
-		        ok
-		    }
-		}
-	*/
+func (lc *LldapClient) CreateUserAttribute(
+	name string,
+	attributeType LldapCustomAttributeType,
+	isList bool,
+	isVisible bool,
+	isEditable bool,
+) diag.Diagnostics {
+	type CreateUserAttributeVariables struct {
+		Name          string                   `json:"name"`
+		AttributeType LldapCustomAttributeType `json:"attributeType"`
+		IsList        bool                     `json:"isList"`
+		IsVisible     bool                     `json:"isVisible"`
+		IsEditable    bool                     `json:"isEditable"`
+	}
+	type CreateUserAttributeResponseData struct {
+		AddUserAttribute LldapMutateOk `json:"addUserAttribute"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation CreateUserAttribute($name: String!, $attributeType: AttributeType!, $isList: Boolean!, $isVisible: Boolean!, $isEditable: Boolean!) { addUserAttribute(name: $name, attributeType: $attributeType, isList: $isList, isVisible: $isVisible, isEditable: $isEditable) { ok } }",
+		OperationName: "CreateUserAttribute",
+		Variables: CreateUserAttributeVariables{
+			Name:          name,
+			AttributeType: attributeType,
+			IsList:        isList,
+			IsVisible:     isVisible,
+			IsEditable:    isEditable,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	createResponse := LldapClientResponse[CreateUserAttributeResponseData]{}
+	unmarshErr := json.Unmarshal(response, &createResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if createResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !createResponse.Data.AddUserAttribute.OK {
+		return diag.Errorf("Failed to create user attribute: %s", string(response))
+	}
 	return nil
 }
 
 func (lc *LldapClient) DeleteUserAttribute(name string) diag.Diagnostics {
-	/*
-		mutation DeleteUserAttributeQuery($name: String!) {
-		    deleteUserAttribute(name: $name) {
-		        ok
-		    }
-		}
-	*/
+	type DeleteUserAttributeVariable struct {
+		Name string `json:"name"`
+	}
+	type DeleteUserAttributeResponseData struct {
+		DeleteUserAttribute LldapMutateOk `json:"deleteUserAttribute"`
+	}
+	query := LldapClientQuery{
+		Query:         "mutation DeleteUserAttributeQuery($name: String!) { deleteUserAttribute(name: $name) { ok } }",
+		OperationName: "DeleteUserAttributeQuery",
+		Variables: DeleteUserAttributeVariable{
+			Name: name,
+		},
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return responseDiagErr
+	}
+	deleteResponse := LldapClientResponse[DeleteUserAttributeResponseData]{}
+	unmarshErr := json.Unmarshal(response, &deleteResponse)
+	if unmarshErr != nil {
+		return diag.FromErr(unmarshErr)
+	}
+	if deleteResponse.Errors != nil {
+		return diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	if !deleteResponse.Data.DeleteUserAttribute.OK {
+		return diag.Errorf("Failed to delete user attribute: %s", string(response))
+	}
 	return nil
 }
 
