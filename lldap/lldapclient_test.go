@@ -424,6 +424,7 @@ func TestGetUser(t *testing.T) {
 	assert.Equal(t, "admin", result.Id)
 	assert.Equal(t, "Administrator", result.DisplayName)
 	assert.NotNil(t, result.CreationDate)
+	assert.NotNil(t, result.Attributes)
 }
 
 func TestGetUserErr(t *testing.T) {

@@ -547,7 +547,7 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 		User LldapUser `json:"user"`
 	}
 	query := LldapClientQuery{
-		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate uuid avatar groups {id displayName}}}",
+		Query:         "query GetUserDetails($id: String!) {user(userId: $id) {id email displayName firstName lastName creationDate uuid avatar groups {id displayName} attributes {name value}}}",
 		OperationName: "GetUserDetails",
 		Variables: GetUserVariables{
 			Id: id,
