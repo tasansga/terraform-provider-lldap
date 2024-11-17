@@ -80,17 +80,33 @@ type LldapGroup struct {
 	Users        []LldapUser `json:"users"`
 }
 
+type LldapUserAttributeSchema struct {
+	Name          string `json:"name"`
+	AttributeType string `json:"attributeType"`
+	IsList        bool   `json:"isList"`
+	IsVisible     bool   `json:"isVisible"`
+	IsEditable    bool   `json:"isEditable"`
+	IsHardcoded   bool   `json:"isHardcoded"`
+	IsReadonly    bool   `json:"isReadonly"`
+}
+
+type LldapUserAttribute struct {
+	Name  string   `json:"name"`
+	Value []string `json:"value"`
+}
+
 type LldapUser struct {
-	Id           string       `json:"id"`
-	Password     string       `json:"password"`
-	Email        string       `json:"email"`
-	DisplayName  string       `json:"displayName"`
-	FirstName    string       `json:"firstName"`
-	LastName     string       `json:"lastName"`
-	CreationDate string       `json:"creationDate"`
-	Uuid         string       `json:"uuid"`
-	Avatar       string       `json:"avatar"`
-	Groups       []LldapGroup `json:"groups"`
+	Id           string               `json:"id"`
+	Password     string               `json:"password"`
+	Email        string               `json:"email"`
+	DisplayName  string               `json:"displayName"`
+	FirstName    string               `json:"firstName"`
+	LastName     string               `json:"lastName"`
+	CreationDate string               `json:"creationDate"`
+	Uuid         string               `json:"uuid"`
+	Avatar       string               `json:"avatar"`
+	Groups       []LldapGroup         `json:"groups"`
+	Attributes   []LldapUserAttribute `json:"attributes"`
 }
 
 type LldapClient struct {
@@ -441,6 +457,35 @@ func (lc *LldapClient) DeleteGroup(id int) diag.Diagnostics {
 		return diag.Errorf("Failed to delete group: %s", string(response))
 	}
 	return nil
+}
+
+func (lc *LldapClient) GetUserAttributesSchema() ([]LldapUserAttributeSchema, diag.Diagnostics) {
+	query := LldapClientQuery{
+		Query:         "query GetUserAttributesSchema { schema { userSchema { attributes { name attributeType isList isVisible isEditable isHardcoded isReadonly}}}}",
+		OperationName: "GetUserAttributesSchema",
+	}
+	response, responseDiagErr := lc.query(query)
+	if responseDiagErr != nil {
+		return nil, responseDiagErr
+	}
+	type GetUserSchemaResponseData struct {
+		Attributes []LldapUserAttributeSchema `json:"attributes"`
+	}
+	type GetUserSchemaResponseUserSchema struct {
+		UserSchema GetUserSchemaResponseData `json:"userSchema"`
+	}
+	type GetUserSchemaResponse struct {
+		Schema GetUserSchemaResponseUserSchema `json:"schema"`
+	}
+	schema := LldapClientResponse[GetUserSchemaResponse]{}
+	unmarshErr := json.Unmarshal(response, &schema)
+	if unmarshErr != nil {
+		return nil, diag.FromErr(unmarshErr)
+	}
+	if schema.Errors != nil {
+		return nil, diag.Errorf("GraphQL query returned error: %s", string(response))
+	}
+	return schema.Data.Schema.UserSchema.Attributes, nil
 }
 
 func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {

@@ -199,6 +199,87 @@ func TestDeleteGroup(t *testing.T) {
 	}
 }
 
+func TestGetUserAttributesSchema(t *testing.T) {
+	client := getTestClient()
+	getUserAttr, getUserAttrErr := client.GetUserAttributesSchema()
+	assert.Nil(t, getUserAttrErr)
+	assert.NotNil(t, getUserAttr)
+	assert.Equal(t, []LldapUserAttributeSchema{
+		{
+			Name:          "avatar",
+			AttributeType: "JPEG_PHOTO",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    true,
+			IsHardcoded:   true,
+			IsReadonly:    false,
+		},
+		{
+			Name:          "creation_date",
+			AttributeType: "DATE_TIME",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    false,
+			IsHardcoded:   true,
+			IsReadonly:    true,
+		},
+		{
+			Name:          "display_name",
+			AttributeType: "STRING",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    true,
+			IsHardcoded:   true,
+			IsReadonly:    false,
+		},
+		{
+			Name:          "first_name",
+			AttributeType: "STRING",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    true,
+			IsHardcoded:   true,
+			IsReadonly:    false,
+		},
+		{
+			Name:          "last_name",
+			AttributeType: "STRING",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    true,
+			IsHardcoded:   true,
+			IsReadonly:    false,
+		},
+		{
+			Name:          "mail",
+			AttributeType: "STRING",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    true,
+			IsHardcoded:   true,
+			IsReadonly:    false,
+		},
+		{
+			Name:          "user_id",
+			AttributeType: "STRING",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    false,
+			IsHardcoded:   true,
+			IsReadonly:    true,
+		},
+		{
+			Name:          "uuid",
+			AttributeType: "STRING",
+			IsList:        false,
+			IsVisible:     true,
+			IsEditable:    false,
+			IsHardcoded:   true,
+			IsReadonly:    true,
+		},
+	}, getUserAttr)
+}
+
 func TestCreateUser(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestCreateUser")
