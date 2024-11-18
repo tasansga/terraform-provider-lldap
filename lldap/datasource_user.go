@@ -18,6 +18,28 @@ func dataSourceUser() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceUserRead,
 		Schema: map[string]*schema.Schema{
+			"attributes": {
+				Type:        schema.TypeSet,
+				Computed:    true,
+				Description: "Custom attributes for this user",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Unique name of this attribute",
+						},
+						"value": {
+							Type:     schema.TypeSet,
+							Computed: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of values for this attribute",
+						},
+					},
+				},
+			},
 			"avatar": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -55,7 +77,7 @@ func dataSourceUser() *schema.Resource {
 							Description: "Display name of the group",
 						},
 						"id": {
-							Type:        schema.TypeInt,
+							Type:        schema.TypeString,
 							Computed:    true,
 							Description: "The unique group ID",
 						},
@@ -89,18 +111,6 @@ func dataSourceUser() *schema.Resource {
 	}
 }
 
-func dataSourceUserMembershipParser(groups []LldapGroup) []map[string]any {
-	result := make([]map[string]any, len(groups))
-	for i, llgroup := range groups {
-		group := map[string]any{
-			"id":           llgroup.Id,
-			"display_name": llgroup.DisplayName,
-		}
-		result[i] = group
-	}
-	return result
-}
-
 func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	id := d.Get("id").(string)
 	lc := m.(*LldapClient)
@@ -110,15 +120,16 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 	}
 	d.SetId(user.Id)
 	for k, v := range map[string]interface{}{
-		"username":      user.Id,
-		"email":         user.Email,
-		"display_name":  user.DisplayName,
-		"first_name":    user.FirstName,
-		"last_name":     user.LastName,
-		"creation_date": user.CreationDate,
-		"uuid":          user.Uuid,
+		"attributes":    dataSourceAttributesParser(user.Attributes),
 		"avatar":        user.Avatar,
-		"groups":        dataSourceUserMembershipParser(user.Groups),
+		"creation_date": user.CreationDate,
+		"display_name":  user.DisplayName,
+		"email":         user.Email,
+		"first_name":    user.FirstName,
+		"groups":        dataSourceGroupsParser(user.Groups),
+		"last_name":     user.LastName,
+		"username":      user.Id,
+		"uuid":          user.Uuid,
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
 			return diag.FromErr(setErr)

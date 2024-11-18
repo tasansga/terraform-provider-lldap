@@ -78,6 +78,25 @@ func dataSourceUsers() *schema.Resource {
 	}
 }
 
+func dataSourceUsersParser(users []LldapUser) []map[string]any {
+	result := make([]map[string]any, len(users))
+	for i, user := range users {
+		user := map[string]any{
+			"id":            user.Id,
+			"username":      user.Id,
+			"email":         user.Email,
+			"display_name":  user.DisplayName,
+			"first_name":    user.FirstName,
+			"last_name":     user.LastName,
+			"creation_date": user.CreationDate,
+			"uuid":          user.Uuid,
+			"avatar":        user.Avatar,
+		}
+		result[i] = user
+	}
+	return result
+}
+
 func dataSourceUsersRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	lc := m.(*LldapClient)
 	users, getUsersErr := lc.GetUsers()
@@ -96,23 +115,4 @@ func dataSourceUsersRead(_ context.Context, d *schema.ResourceData, m any) diag.
 		return diag.Errorf("could not create user set: %s", setErr)
 	}
 	return nil
-}
-
-func dataSourceUsersParser(users []LldapUser) []map[string]any {
-	result := make([]map[string]any, len(users))
-	for i, user := range users {
-		user := map[string]any{
-			"id":            user.Id,
-			"username":      user.Id,
-			"email":         user.Email,
-			"display_name":  user.DisplayName,
-			"first_name":    user.FirstName,
-			"last_name":     user.LastName,
-			"creation_date": user.CreationDate,
-			"uuid":          user.Uuid,
-			"avatar":        user.Avatar,
-		}
-		result[i] = user
-	}
-	return result
 }
