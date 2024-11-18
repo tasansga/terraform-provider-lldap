@@ -8,9 +8,6 @@ package lldap
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
-	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -59,14 +56,7 @@ func dataSourceGroupsRead(_ context.Context, d *schema.ResourceData, m any) diag
 	if getGroupsErr != nil {
 		return getGroupsErr
 	}
-	hashBase, marshalErr := json.Marshal(llgroups)
-	if marshalErr != nil {
-		return diag.FromErr(marshalErr)
-	}
-	hash := sha1.New()
-	hash.Write([]byte(hashBase))
-	hashString := hex.EncodeToString(hash.Sum(nil))
-	d.SetId(hashString)
+	dataSourceSetHashId(d, llgroups)
 	if setErr := d.Set("groups", dataSourceGroupsParser(llgroups)); setErr != nil {
 		return diag.Errorf("could not create group set: %s", setErr)
 	}

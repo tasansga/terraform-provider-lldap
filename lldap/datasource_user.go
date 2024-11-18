@@ -71,6 +71,11 @@ func dataSourceUser() *schema.Resource {
 				Description: "Groups where the user is a member",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"creation_date": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Metadata of group object creation",
+						},
 						"display_name": {
 							Type:        schema.TypeString,
 							Computed:    true,
