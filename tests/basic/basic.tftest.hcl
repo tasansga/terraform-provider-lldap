@@ -56,7 +56,14 @@ run "test_user" {
     error_message = "attributes should not be null"
   }
   assert {
-    condition     = toset([for k in output.user.attributes: k.name ]) == toset(["creation_date","display_name","mail","user_id","uuid"])
+    condition     = toset([for k in output.user.attributes : k.name]) == toset(["creation_date", "display_name", "mail", "user_id", "uuid"])
     error_message = "missing or unexpected attributes"
+  }
+}
+
+run "test_user_attrs" {
+  assert {
+    condition     = output.user_attrs.id == "e15d7663119bbfd51e29f151a5707727ae7c5a7e"
+    error_message = "invalid hashsum for user attributes"
   }
 }
