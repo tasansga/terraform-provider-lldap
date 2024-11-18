@@ -67,3 +67,10 @@ run "test_user_attrs" {
     error_message = "invalid hashsum for user attributes"
   }
 }
+
+run "test_group_attrs" {
+  assert {
+    condition     = output.group_attrs.id == "1a6ea410b2b50e19e68a6d24c1eb18935fc914e5"
+    error_message = "invalid hashsum for group attributes"
+  }
+}

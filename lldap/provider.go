@@ -60,11 +60,12 @@ func Provider() *schema.Provider {
 			"lldap_user":   resourceUser(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"lldap_group":           dataSourceGroup(),
-			"lldap_groups":          dataSourceGroups(),
-			"lldap_user":            dataSourceUser(),
-			"lldap_user_attributes": dataSourceUserAttributes(),
-			"lldap_users":           dataSourceUsers(),
+			"lldap_group_attributes": dataSourceGroupAttributes(),
+			"lldap_group":            dataSourceGroup(),
+			"lldap_groups":           dataSourceGroups(),
+			"lldap_user_attributes":  dataSourceUserAttributes(),
+			"lldap_user":             dataSourceUser(),
+			"lldap_users":            dataSourceUsers(),
 		},
 	}
 
