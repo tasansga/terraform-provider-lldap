@@ -56,6 +56,18 @@ func dataSourceGroup() *schema.Resource {
 	}
 }
 
+func dataSourceGroupUsersParser(llusers []LldapUser) []map[string]any {
+	result := make([]map[string]any, len(llusers))
+	for i, lluser := range llusers {
+		group := map[string]any{
+			"id":           lluser.Id,
+			"display_name": lluser.DisplayName,
+		}
+		result[i] = group
+	}
+	return result
+}
+
 func dataSourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	id := d.Get("id").(int)
 	lc := m.(*LldapClient)
@@ -74,16 +86,4 @@ func dataSourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.
 		return diag.Errorf("Could not set users: %s", setErr)
 	}
 	return nil
-}
-
-func dataSourceGroupUsersParser(llusers []LldapUser) []map[string]any {
-	result := make([]map[string]any, len(llusers))
-	for i, lluser := range llusers {
-		group := map[string]any{
-			"id":           lluser.Id,
-			"display_name": lluser.DisplayName,
-		}
-		result[i] = group
-	}
-	return result
 }

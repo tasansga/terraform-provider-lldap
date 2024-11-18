@@ -51,4 +51,12 @@ run "test_user" {
     condition     = { for group in output.user.groups : "${group.id}" => group.display_name }["1"] == "lldap_admin"
     error_message = "Mapping of user groups details failed"
   }
+  assert {
+    condition     = output.user.attributes != null
+    error_message = "attributes should not be null"
+  }
+  assert {
+    condition     = toset([for k in output.user.attributes: k.name ]) == toset(["creation_date","display_name","mail","user_id","uuid"])
+    error_message = "missing or unexpected attributes"
+  }
 }

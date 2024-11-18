@@ -11,7 +11,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -72,16 +71,4 @@ func dataSourceGroupsRead(_ context.Context, d *schema.ResourceData, m any) diag
 		return diag.Errorf("could not create group set: %s", setErr)
 	}
 	return nil
-}
-
-func dataSourceGroupsParser(llgroups []LldapGroup) []map[string]any {
-	result := make([]map[string]any, len(llgroups))
-	for i, llgroup := range llgroups {
-		group := map[string]any{
-			"id":           strconv.Itoa(llgroup.Id),
-			"display_name": llgroup.DisplayName,
-		}
-		result[i] = group
-	}
-	return result
 }
