@@ -57,9 +57,14 @@ output "user" {
   value = data.lldap_user.admin
 }
 
-
 data "lldap_user_attributes" "user_attrs" {}
 
 output "user_attrs" {
   value = data.lldap_user_attributes.user_attrs
+}
+
+data "lldap_group_attributes" "group_attrs" {}
+
+output "group_attrs" {
+  value = data.lldap_group_attributes.group_attrs
 }
