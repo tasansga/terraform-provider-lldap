@@ -18,6 +18,28 @@ func dataSourceGroup() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceGroupRead,
 		Schema: map[string]*schema.Schema{
+			"attributes": {
+				Type:        schema.TypeSet,
+				Computed:    true,
+				Description: "Custom attributes for this group",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Unique name of this attribute",
+						},
+						"value": {
+							Type:     schema.TypeSet,
+							Computed: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of values for this attribute",
+						},
+					},
+				},
+			},
 			"creation_date": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -76,14 +98,15 @@ func dataSourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.
 		return getGroupErr
 	}
 	d.SetId(strconv.Itoa(llgroup.Id))
-	if setErr := d.Set("display_name", llgroup.DisplayName); setErr != nil {
-		return diag.Errorf("Could not set display_name: %s", setErr)
-	}
-	if setErr := d.Set("creation_date", llgroup.CreationDate); setErr != nil {
-		return diag.Errorf("Could not set creation_date: %s", setErr)
-	}
-	if setErr := d.Set("users", dataSourceGroupUsersParser(llgroup.Users)); setErr != nil {
-		return diag.Errorf("Could not set users: %s", setErr)
+	for k, v := range map[string]interface{}{
+		"display_name":  llgroup.DisplayName,
+		"creation_date": llgroup.CreationDate,
+		"users":         dataSourceGroupUsersParser(llgroup.Users),
+		"attributes":    dataSourceAttributesParser(llgroup.Attributes),
+	} {
+		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
 	}
 	return nil
 }
