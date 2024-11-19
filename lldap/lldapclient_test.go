@@ -124,6 +124,19 @@ func TestGetGroupAttributesSchema(t *testing.T) {
 	}, getGroupAttr)
 }
 
+func TestGetGroupAttributeSchema(t *testing.T) {
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestGetGroupAttributeSchema"))
+	client.CreateGroupAttribute(attrName, "STRING", false, true)
+	result, resultErr := client.GetGroupAttributeSchema(attrName)
+	assert.Nil(t, resultErr)
+	assert.NotNil(t, result)
+	assert.Equal(t, attrName, result.Name)
+	assert.False(t, result.IsList)
+	assert.True(t, result.IsVisible)
+	assert.Equal(t, LldapCustomAttributeType("STRING"), result.AttributeType)
+}
+
 func TestCreateGroupAttribute(t *testing.T) {
 	client := getTestClient()
 	attrName := strings.ToLower(randomTestSuffix("TestCreateGroupAttribute"))
@@ -236,6 +249,20 @@ func TestGetUserAttributesSchema(t *testing.T) {
 			IsReadonly:    true,
 		},
 	}, getUserAttr)
+}
+
+func TestGetUserAttributeSchema(t *testing.T) {
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestGetUserAttributeSchema"))
+	client.CreateUserAttribute(attrName, "STRING", false, true, false)
+	result, resultErr := client.GetUserAttributeSchema(attrName)
+	assert.Nil(t, resultErr)
+	assert.NotNil(t, result)
+	assert.Equal(t, attrName, result.Name)
+	assert.False(t, result.IsList)
+	assert.True(t, result.IsVisible)
+	assert.False(t, result.IsEditable)
+	assert.Equal(t, LldapCustomAttributeType("STRING"), result.AttributeType)
 }
 
 func TestCreateUserAttribute(t *testing.T) {

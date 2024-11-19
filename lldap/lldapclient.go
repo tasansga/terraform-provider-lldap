@@ -129,6 +129,14 @@ type LldapClient struct {
 	LdapClient   *ldap.Conn
 }
 
+// Check https://github.com/lldap/lldap/blob/main/app/src/infra/schema.rs
+var VALID_ATTRIBUTE_TYPES = []string{
+	"DATE_TIME",
+	"INTEGER",
+	"JPEG_PHOTO",
+	"STRING",
+}
+
 func getLdapBindConnection(ldapUrl string, baseDn string, username string, password string) (*ldap.Conn, diag.Diagnostics) {
 	ldapclient, dialErr := ldap.DialURL(ldapUrl, ldap.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}))
 	if dialErr != nil {
@@ -259,6 +267,20 @@ func (lc *LldapClient) Authenticate() diag.Diagnostics {
 	return nil
 }
 
+func (lc *LldapClient) GetGroupAttributeSchema(name string) (*LldapGroupAttributeSchema, diag.Diagnostics) {
+	attributes, getAttrErr := lc.GetGroupAttributesSchema()
+	if getAttrErr != nil {
+		return nil, getAttrErr
+	}
+	for _, attr := range attributes {
+		if attr.Name == name {
+			result := attr
+			return &result, nil
+		}
+	}
+	return nil, nil
+}
+
 func (lc *LldapClient) GetGroupAttributesSchema() ([]LldapGroupAttributeSchema, diag.Diagnostics) {
 	query := LldapClientQuery{
 		Query:         "query GetGroupAttributesSchema { schema { groupSchema { attributes { name attributeType isList isVisible isHardcoded isReadonly }}}}",
@@ -361,6 +383,20 @@ func (lc *LldapClient) DeleteGroupAttribute(name string) diag.Diagnostics {
 		return diag.Errorf("Failed to delete group attribute: %s", string(response))
 	}
 	return nil
+}
+
+func (lc *LldapClient) GetUserAttributeSchema(name string) (*LldapUserAttributeSchema, diag.Diagnostics) {
+	attributes, getAttrErr := lc.GetUserAttributesSchema()
+	if getAttrErr != nil {
+		return nil, getAttrErr
+	}
+	for _, attr := range attributes {
+		if attr.Name == name {
+			result := attr
+			return &result, nil
+		}
+	}
+	return nil, nil
 }
 
 func (lc *LldapClient) GetUserAttributesSchema() ([]LldapUserAttributeSchema, diag.Diagnostics) {
