@@ -626,7 +626,7 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 		Group LldapGroup `json:"group"`
 	}
 	query := LldapClientQuery{
-		Query:         "query GetGroupDetails($id: Int!) {group(groupId: $id) {id displayName creationDate uuid users {id displayName}}}",
+		Query:         "query GetGroupDetails($id: Int!) {group(groupId: $id) {id displayName creationDate uuid users {id displayName} attributes {name value}}}",
 		OperationName: "GetGroupDetails",
 		Variables: GetGroupVariables{
 			Id: id,

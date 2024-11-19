@@ -33,6 +33,14 @@ run "test_group" {
     error_message = "Mapping of group users failed"
   }
   assert {
+    condition     = output.group.attributes != null
+    error_message = "attributes should not be null"
+  }
+  assert {
+    condition     = length(output.group.attributes) >= 4
+    error_message = "lacking attributes: ${jsonencode(output.group.attributes)}"
+  }
+  assert {
     condition     = { for user in output.group.users : user.id => user }["admin"].display_name == "Administrator"
     error_message = "Mapping of group user details failed"
   }
@@ -54,6 +62,10 @@ run "test_user" {
   assert {
     condition     = output.user.attributes != null
     error_message = "attributes should not be null"
+  }
+  assert {
+    condition     = length(output.user.attributes) >= 5
+    error_message = "lacking attributes: ${jsonencode(output.user.attributes)}"
   }
   assert {
     condition     = toset([for k in output.user.attributes : k.name]) == toset(["creation_date", "display_name", "mail", "user_id", "uuid"])
