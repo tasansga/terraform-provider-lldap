@@ -25,25 +25,24 @@ provider "lldap" {
   base_dn  = var.lldap_base_dn
 }
 
-resource "lldap_user_attribute" "test" {
+resource "lldap_group_attribute" "test" {
   count          = 50
   name           = "test-${count.index}"
   attribute_type = "STRING"
 }
 
-output "user_attr" {
-  value = lldap_user_attribute.test
+output "group_attr" {
+  value = lldap_group_attribute.test
 }
 
-resource "lldap_user_attribute" "test_change" {
+resource "lldap_group_attribute" "test_change" {
   name           = "test-change"
   attribute_type = "STRING"
-  is_editable    = true
   is_list        = true
   is_visible     = false
 }
 
-output "user_attr_change" {
-  value = lldap_user_attribute.test_change
+output "group_attr_change" {
+  value = lldap_group_attribute.test_change
 }
 
