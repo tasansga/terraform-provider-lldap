@@ -23,4 +23,8 @@ run "test_group" {
     condition = length(data.lldap_groups.test.groups) == output.group_count + 3 // new groups plus lldap_admin, lldap_password_manager, lldap_strict_readonly
     error_message = "Found ${length(data.lldap_groups.test.groups)} groups (${jsonencode(data.lldap_groups.test)}) in data source but should be ${output.group_count + 3}"
   }
+  assert {
+    condition = toset(keys({ for k, v in output.test[0].attributes : v.name => v.value })) == toset(["creation_date","display_name","group_id","uuid"])
+    error_message = "Error matching attributes: ${jsonencode(output.test[0].attributes)}"
+  }
 }

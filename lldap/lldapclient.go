@@ -615,6 +615,7 @@ func (lc *LldapClient) CreateGroup(group *LldapGroup) diag.Diagnostics {
 	group.DisplayName = getGroup.DisplayName
 	group.Uuid = getGroup.Uuid
 	group.Users = getGroup.Users
+	group.Attributes = getGroup.Attributes
 	return nil
 }
 
