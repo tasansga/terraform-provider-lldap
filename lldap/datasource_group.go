@@ -21,7 +21,7 @@ func dataSourceGroup() *schema.Resource {
 			"attributes": {
 				Type:        schema.TypeSet,
 				Computed:    true,
-				Description: "Custom attributes for this group",
+				Description: "Attributes for this group",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {

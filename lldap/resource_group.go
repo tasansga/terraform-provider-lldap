@@ -32,6 +32,28 @@ func resourceGroup() *schema.Resource {
 				Computed:    true,
 				Description: "Metadata of group object creation",
 			},
+			"attributes": {
+				Type:        schema.TypeSet,
+				Computed:    true,
+				Description: "Attributes for this group",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Unique name of this attribute",
+						},
+						"value": {
+							Type:     schema.TypeSet,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of values for this attribute",
+						},
+					},
+				},
+			},
 			"display_name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -61,10 +83,11 @@ func resourceGroup() *schema.Resource {
 
 func resourceGroupSetResourceData(d *schema.ResourceData, group *LldapGroup) diag.Diagnostics {
 	for k, v := range map[string]interface{}{
-		"display_name":  group.DisplayName,
+		"attributes":    dataSourceAttributesParser(group.Attributes),
 		"creation_date": group.CreationDate,
-		"uuid":          group.Uuid,
+		"display_name":  group.DisplayName,
 		"users":         resourceGroupUsersParser(group.Users),
+		"uuid":          group.Uuid,
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
 			return diag.FromErr(setErr)

@@ -361,6 +361,7 @@ func TestCreateGroup(t *testing.T) {
 	assert.NotNil(t, group.DisplayName)
 	assert.NotEmpty(t, group.DisplayName)
 	assert.Equal(t, 0, len(group.Users))
+	//assert.NotEmpty(t, group.Attributes)
 }
 
 func TestCreateGroups(t *testing.T) {
