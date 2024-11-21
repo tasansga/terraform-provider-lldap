@@ -125,7 +125,7 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 	}
 	d.SetId(user.Id)
 	for k, v := range map[string]interface{}{
-		"attributes":    dataSourceAttributesParser(user.Attributes),
+		"attributes":    attributesParser(user.Attributes),
 		"avatar":        user.Avatar,
 		"creation_date": user.CreationDate,
 		"display_name":  user.DisplayName,

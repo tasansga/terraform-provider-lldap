@@ -103,3 +103,15 @@ func Provider() *schema.Provider {
 
 	return provider
 }
+
+func attributesParser(attrs []LldapCustomAttribute) []map[string]any {
+	result := make([]map[string]any, len(attrs))
+	for i, llattr := range attrs {
+		attr := map[string]any{
+			"name":  llattr.Name,
+			"value": llattr.Value,
+		}
+		result[i] = attr
+	}
+	return result
+}
