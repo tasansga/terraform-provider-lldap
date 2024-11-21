@@ -757,16 +757,21 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 	type LldapCreateUserResponse struct {
 		CreateUser LldapCreateUserResponseData `json:"createUser"`
 	}
-	createdUser := LldapClientResponse[LldapCreateUserResponse]{}
-	unmarshErr := json.Unmarshal(response, &createdUser)
+	CreatedUserOp := LldapClientResponse[LldapCreateUserResponse]{}
+	unmarshErr := json.Unmarshal(response, &CreatedUserOp)
 	if unmarshErr != nil {
 		return diag.FromErr(unmarshErr)
 	}
-	if createdUser.Errors != nil {
+	if CreatedUserOp.Errors != nil {
 		return diag.Errorf("GraphQL query returned error: %s (%s)", string(response), user.Id)
 	}
-	user.CreationDate = createdUser.Data.CreateUser.CreationDate
-	user.Uuid = createdUser.Data.CreateUser.Uuid
+	createdUser, getCreatedUserErr := lc.GetUser(user.Id)
+	if getCreatedUserErr != nil {
+		return getCreatedUserErr
+	}
+	user.CreationDate = createdUser.CreationDate
+	user.Uuid = createdUser.Uuid
+	user.Attributes = createdUser.Attributes
 	return nil
 }
 

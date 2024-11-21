@@ -27,6 +27,28 @@ func resourceUser() *schema.Resource {
 		},
 		DeleteContext: resourceUserDelete,
 		Schema: map[string]*schema.Schema{
+			"attributes": {
+				Type:        schema.TypeSet,
+				Computed:    true,
+				Description: "Attributes for this user",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Unique name of this attribute",
+						},
+						"value": {
+							Type:     schema.TypeSet,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of values for this attribute",
+						},
+					},
+				},
+			},
 			"avatar": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -91,15 +113,16 @@ func resourceUser() *schema.Resource {
 
 func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.Diagnostics {
 	for k, v := range map[string]interface{}{
-		"username":      user.Id,
-		"email":         user.Email,
-		"password":      user.Password,
+		"attributes":    dataSourceAttributesParser(user.Attributes),
+		"avatar":        user.Avatar,
+		"creation_date": user.CreationDate,
 		"display_name":  user.DisplayName,
+		"email":         user.Email,
 		"first_name":    user.FirstName,
 		"last_name":     user.LastName,
-		"creation_date": user.CreationDate,
+		"password":      user.Password,
+		"username":      user.Id,
 		"uuid":          user.Uuid,
-		"avatar":        user.Avatar,
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
 			return diag.FromErr(setErr)

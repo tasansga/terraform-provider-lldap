@@ -39,6 +39,10 @@ run "test_user" {
     condition     = output.user[0].uuid != null && output.user[0].uuid != ""
     error_message = "uuid should not be null or empty string"
   }
+  assert {
+    condition = toset(keys({ for k, v in output.user[0].attributes : v.name => v.value })) == toset(["avatar","creation_date","display_name","first_name","last_name","mail","user_id","uuid"])
+    error_message = "Error matching attributes: ${nonsensitive(jsonencode(keys({ for k, v in output.user[0].attributes : v.name => v.value })))}"
+  }
 }
 
 run "test_users_map" {

@@ -438,6 +438,7 @@ func TestCreateUser(t *testing.T) {
 	assert.Equal(t, "lname", testUser.LastName)
 	assert.Equal(t, "dname", testUser.DisplayName)
 	assert.Equal(t, avatar, testUser.Avatar)
+	assert.NotEmpty(t, testUser.Attributes)
 	users, _ := client.GetUsers()
 	for _, v := range users {
 		assert.False(t, v.Id == userId)
@@ -449,6 +450,7 @@ func TestCreateUser(t *testing.T) {
 	assert.Equal(t, "lname", check.LastName)
 	assert.Equal(t, "dname", check.DisplayName)
 	assert.Equal(t, avatar, check.Avatar)
+	assert.NotEmpty(t, testUser.Attributes)
 }
 
 func TestUpdateUser(t *testing.T) {
