@@ -102,7 +102,7 @@ func dataSourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.
 		"display_name":  llgroup.DisplayName,
 		"creation_date": llgroup.CreationDate,
 		"users":         dataSourceGroupUsersParser(llgroup.Users),
-		"attributes":    dataSourceAttributesParser(llgroup.Attributes),
+		"attributes":    attributesParser(llgroup.Attributes),
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
 			return diag.FromErr(setErr)

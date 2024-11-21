@@ -83,7 +83,7 @@ func resourceGroup() *schema.Resource {
 
 func resourceGroupSetResourceData(d *schema.ResourceData, group *LldapGroup) diag.Diagnostics {
 	for k, v := range map[string]interface{}{
-		"attributes":    dataSourceAttributesParser(group.Attributes),
+		"attributes":    attributesParser(group.Attributes),
 		"creation_date": group.CreationDate,
 		"display_name":  group.DisplayName,
 		"users":         resourceGroupUsersParser(group.Users),

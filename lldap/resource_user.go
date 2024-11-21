@@ -113,7 +113,7 @@ func resourceUser() *schema.Resource {
 
 func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.Diagnostics {
 	for k, v := range map[string]interface{}{
-		"attributes":    dataSourceAttributesParser(user.Attributes),
+		"attributes":    attributesParser(user.Attributes),
 		"avatar":        user.Avatar,
 		"creation_date": user.CreationDate,
 		"display_name":  user.DisplayName,

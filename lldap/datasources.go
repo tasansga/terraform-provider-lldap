@@ -27,18 +27,6 @@ func dataSourceSetHashId(d *schema.ResourceData, v any) diag.Diagnostics {
 	return nil
 }
 
-func dataSourceAttributesParser(attrs []LldapCustomAttribute) []map[string]any {
-	result := make([]map[string]any, len(attrs))
-	for i, llattr := range attrs {
-		attr := map[string]any{
-			"name":  llattr.Name,
-			"value": llattr.Value,
-		}
-		result[i] = attr
-	}
-	return result
-}
-
 func dataSourceGroupsParser(llgroups []LldapGroup) []map[string]any {
 	result := make([]map[string]any, len(llgroups))
 	for i, llgroup := range llgroups {
