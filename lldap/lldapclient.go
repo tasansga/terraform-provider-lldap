@@ -814,6 +814,7 @@ func (lc *LldapClient) CreateUser(user *LldapUser) diag.Diagnostics {
 	user.CreationDate = createdUser.CreationDate
 	user.Uuid = createdUser.Uuid
 	user.Attributes = createdUser.Attributes
+	user.Groups = createdUser.Groups
 	return nil
 }
 

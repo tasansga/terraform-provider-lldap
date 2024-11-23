@@ -76,6 +76,30 @@ func resourceUser() *schema.Resource {
 				Default:     "",
 				Description: "First name of this user",
 			},
+			"groups": {
+				Type:        schema.TypeSet,
+				Computed:    true,
+				Description: "Groups where the user is a member",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"creation_date": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Metadata of group object creation",
+						},
+						"display_name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Display name of the group",
+						},
+						"id": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The unique group ID",
+						},
+					},
+				},
+			},
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -119,6 +143,7 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 		"display_name":  user.DisplayName,
 		"email":         user.Email,
 		"first_name":    user.FirstName,
+		"groups":        dataSourceGroupsParser(user.Groups),
 		"last_name":     user.LastName,
 		"password":      user.Password,
 		"username":      user.Id,
