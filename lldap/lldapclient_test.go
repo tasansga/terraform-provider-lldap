@@ -48,6 +48,28 @@ func randomTestSuffix(s string) string {
 	return fmt.Sprintf("%s-%s", s, string(b))
 }
 
+func TestLldapUserGetCustomAttributes(t *testing.T) {
+	user := LldapUser{
+		Attributes: []LldapCustomAttribute{
+			{
+				Name: "first_name",
+			},
+			{
+				Name: "custom",
+			},
+			{
+				Name: "avatar",
+			},
+		},
+	}
+	expected := []LldapCustomAttribute{
+		{
+			Name: "custom",
+		},
+	}
+	assert.Equal(t, expected, user.GetCustomAttributes())
+}
+
 func TestSetUserPassword(t *testing.T) {
 	client := getTestClient()
 	userId := randomTestSuffix("TestSetUserPassword")
@@ -297,6 +319,48 @@ func TestDeleteUserAttribute(t *testing.T) {
 		}
 	}
 	assert.False(t, hasNewUserAttr)
+}
+
+func TestAddAttributeToUser(t *testing.T) {
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestAddAttributeToUser"))
+	client.CreateUserAttribute(attrName, "STRING", false, true, false)
+	userId := randomTestSuffix("TestAddAttributeToUser")
+	testUser := LldapUser{
+		Id:    userId,
+		Email: randomTestSuffix("TestAddAttributeToUser"),
+	}
+	client.CreateUser(&testUser)
+	addErr := client.AddAttributeToUser(userId, attrName, []string{
+		"TEST_VALUE",
+	})
+	user, _ := client.GetUser(userId)
+	assert.Nil(t, addErr)
+	result := LldapCustomAttribute{
+		Name: attrName,
+		Value: []string{
+			"TEST_VALUE",
+		},
+	}
+	assert.Equal(t, 1, len(user.GetCustomAttributes()))
+	assert.Equal(t, user.GetCustomAttributes(), []LldapCustomAttribute{result})
+}
+
+func TestRemoveAttributeFromUser(t *testing.T) {
+	client := getTestClient()
+	attrName := strings.ToLower(randomTestSuffix("TestRemoveAttributeFromUser"))
+	client.CreateUserAttribute(attrName, "STRING", false, true, false)
+	userId := randomTestSuffix("TestRemoveAttributeFromUser")
+	testUser := LldapUser{
+		Id:    userId,
+		Email: randomTestSuffix("TestRemoveAttributeFromUser"),
+	}
+	client.CreateUser(&testUser)
+	client.AddAttributeToUser(userId, attrName, []string{})
+	removeErr := client.RemoveAttributeFromUser(userId, attrName)
+	assert.Nil(t, removeErr)
+	user, _ := client.GetUser(userId)
+	assert.Equal(t, 0, len(user.GetCustomAttributes()))
 }
 
 func TestAddUserToGroup(t *testing.T) {

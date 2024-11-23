@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -119,6 +120,26 @@ type LldapUser struct {
 	Avatar       string                 `json:"avatar"`
 	Groups       []LldapGroup           `json:"groups"`
 	Attributes   []LldapCustomAttribute `json:"attributes"`
+}
+
+func (user *LldapUser) GetCustomAttributes() []LldapCustomAttribute {
+	hardcodedAttributeNames := []string{
+		"avatar",
+		"creation_date",
+		"display_name",
+		"first_name",
+		"last_name",
+		"mail",
+		"user_id",
+		"uuid",
+	}
+	customAttributes := make([]LldapCustomAttribute, 0)
+	for _, a := range user.Attributes {
+		if !slices.Contains(hardcodedAttributeNames, a.Name) {
+			customAttributes = append(customAttributes, a)
+		}
+	}
+	return customAttributes
 }
 
 type LldapClient struct {
@@ -506,6 +527,27 @@ func (lc *LldapClient) DeleteUserAttribute(name string) diag.Diagnostics {
 	return nil
 }
 
+func (lc *LldapClient) AddAttributeToUser(userId string, attributeName string, attributeValue []string) diag.Diagnostics {
+	user, getUserErr := lc.GetUser(userId)
+	if getUserErr != nil {
+		return getUserErr
+	}
+	return lc.updateUser(user, nil, []LldapCustomAttribute{
+		{
+			Name:  attributeName,
+			Value: attributeValue,
+		},
+	})
+}
+
+func (lc *LldapClient) RemoveAttributeFromUser(userId string, attributeName string) diag.Diagnostics {
+	user, getUserErr := lc.GetUser(userId)
+	if getUserErr != nil {
+		return getUserErr
+	}
+	return lc.updateUser(user, []string{attributeName}, nil)
+}
+
 func (lc *LldapClient) AddUserToGroup(groupId int, userId string) diag.Diagnostics {
 	type AddUserToGroupVariables struct {
 		UserId  string `json:"user"`
@@ -805,13 +847,19 @@ func (lc *LldapClient) GetUser(id string) (*LldapUser, diag.Diagnostics) {
 }
 
 func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
+	return lc.updateUser(user, nil, nil)
+}
+
+func (lc *LldapClient) updateUser(user *LldapUser, removeAttributes []string, insertAttributes []LldapCustomAttribute) diag.Diagnostics {
 	type UpdateUserInput struct {
-		Id          string `json:"id"`
-		Email       string `json:"email"`
-		DisplayName string `json:"displayName"`
-		FirstName   string `json:"firstName"`
-		LastName    string `json:"lastName"`
-		Avatar      string `json:"avatar"`
+		Id               string                 `json:"id"`
+		Email            string                 `json:"email"`
+		DisplayName      string                 `json:"displayName"`
+		FirstName        string                 `json:"firstName"`
+		LastName         string                 `json:"lastName"`
+		Avatar           string                 `json:"avatar"`
+		RemoveAttributes []string               `json:"removeAttributes"`
+		InsertAttributes []LldapCustomAttribute `json:"insertAttributes"`
 	}
 	type UpdateUserVariable struct {
 		UpdateUser UpdateUserInput `json:"user"`
@@ -821,12 +869,14 @@ func (lc *LldapClient) UpdateUser(user *LldapUser) diag.Diagnostics {
 		OperationName: "UpdateUser",
 		Variables: UpdateUserVariable{
 			UpdateUser: UpdateUserInput{
-				Id:          user.Id,
-				Email:       user.Email,
-				DisplayName: user.DisplayName,
-				FirstName:   user.FirstName,
-				LastName:    user.LastName,
-				Avatar:      user.Avatar,
+				Id:               user.Id,
+				Email:            user.Email,
+				DisplayName:      user.DisplayName,
+				FirstName:        user.FirstName,
+				LastName:         user.LastName,
+				Avatar:           user.Avatar,
+				RemoveAttributes: removeAttributes,
+				InsertAttributes: insertAttributes,
 			},
 		},
 	}

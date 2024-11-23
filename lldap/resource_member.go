@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -88,14 +87,8 @@ func resourceMemberCreate(_ context.Context, d *schema.ResourceData, m any) diag
 }
 
 func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	groupIdStr, userId, found := strings.Cut(d.Id(), ResourceMemberIdSeparator)
-	if !found {
-		return diag.Errorf("missing separator '%s' - not a valid member id: %s", ResourceMemberIdSeparator, d.Id())
-	}
-	groupId, groupIdParseErr := strconv.Atoi(groupIdStr)
-	if groupIdParseErr != nil {
-		return diag.FromErr(groupIdParseErr)
-	}
+	groupId := d.Get("group_id").(int)
+	userId := d.Get("user_id").(string)
 	lc := m.(*LldapClient)
 	group, getGroupErr := lc.GetGroup(groupId)
 	if getGroupErr != nil {
@@ -112,14 +105,8 @@ func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 }
 
 func resourceMemberDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	groupIdStr, userId, found := strings.Cut(d.Id(), ResourceMemberIdSeparator)
-	if !found {
-		return diag.Errorf("missing separator '%s' - not a valid member id: %s", ResourceMemberIdSeparator, d.Id())
-	}
-	groupId, groupIdParseErr := strconv.Atoi(groupIdStr)
-	if groupIdParseErr != nil {
-		return diag.FromErr(groupIdParseErr)
-	}
+	groupId := d.Get("group_id").(int)
+	userId := d.Get("user_id").(string)
 	lc := m.(*LldapClient)
 	removeErr := lc.RemoveUserFromGroup(groupId, userId)
 	if removeErr != nil {
