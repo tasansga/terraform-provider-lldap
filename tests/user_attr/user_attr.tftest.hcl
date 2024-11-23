@@ -1,19 +1,22 @@
 run "test_user_attr" {
   assert {
-    condition     = length(output.user_attr) == 50
+    condition     = length(toset(output.user_attr)) == 50
     error_message = "unexpected length of result"
-  }
-  assert {
-    condition = alltrue([
-      for attr in output.user_attr : attr.is_editable == false && attr.is_list == false && attr.is_visible == true
-    ])
-    error_message = jsonencode(output.user_attr)
   }
 }
 
-run "test_user_attr_change" {
+run "test_user_attr_assignment" {
   assert {
-    condition     = output.user_attr_change.is_editable == true && output.user_attr_change.is_list == true && output.user_attr_change.is_visible == false
-    error_message = jsonencode(output.user_attr)
+    condition     = length(output.user_attr_assignment) == 50
+    error_message = "wrong number of user attribute assignments"
+  }
+  assert {
+    condition = jsondecode(jsonencode(output.user_attr_assignment["test-change-0"])) == jsondecode(jsonencode({
+      "attribute_id" : "test-change-0",
+      "id" : "user_attr:test-change-0",
+      "user_id" : "user_attr",
+      "value" : ["test-value: test-change-0"]
+    }))
+    error_message = "unexpected value for user attribute assignment: ${jsonencode(output.user_attr_assignment["test-change-0"])}"
   }
 }

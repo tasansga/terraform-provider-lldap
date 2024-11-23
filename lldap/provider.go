@@ -8,7 +8,11 @@ package lldap
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"net/url"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -55,11 +59,12 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"lldap_group_attribute": resourceGroupAttribute(),
-			"lldap_group":           resourceGroup(),
-			"lldap_member":          resourceMember(),
-			"lldap_user_attribute":  resourceUserAttribute(),
-			"lldap_user":            resourceUser(),
+			"lldap_group_attribute":           resourceGroupAttribute(),
+			"lldap_group":                     resourceGroup(),
+			"lldap_member":                    resourceMember(),
+			"lldap_user_attribute_assignment": resourceUserAttributeAssignment(),
+			"lldap_user_attribute":            resourceUserAttribute(),
+			"lldap_user":                      resourceUser(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"lldap_group_attributes": dataSourceGroupAttributes(),
@@ -102,6 +107,31 @@ func Provider() *schema.Provider {
 	}
 
 	return provider
+}
+
+func dataSourceSetHashId(d *schema.ResourceData, v any) diag.Diagnostics {
+	hashBase, marshalErr := json.Marshal(v)
+	if marshalErr != nil {
+		return diag.FromErr(marshalErr)
+	}
+	hash := sha1.New()
+	hash.Write([]byte(hashBase))
+	hashString := hex.EncodeToString(hash.Sum(nil))
+	d.SetId(hashString)
+	return nil
+}
+
+func dataSourceGroupsParser(llgroups []LldapGroup) []map[string]any {
+	result := make([]map[string]any, len(llgroups))
+	for i, llgroup := range llgroups {
+		group := map[string]any{
+			"id":            strconv.Itoa(llgroup.Id),
+			"display_name":  llgroup.DisplayName,
+			"creation_date": llgroup.CreationDate,
+		}
+		result[i] = group
+	}
+	return result
 }
 
 func attributesParser(attrs []LldapCustomAttribute) []map[string]any {

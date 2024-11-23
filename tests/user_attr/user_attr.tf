@@ -25,25 +25,39 @@ provider "lldap" {
   base_dn  = var.lldap_base_dn
 }
 
+resource "random_password" "user" {
+  length = 16
+}
+
+resource "lldap_user" "user" {
+  username     = "user_attr"
+  email        = "user_attr@this.test"
+  password     = random_password.user.result
+  display_name = "User Attr"
+  first_name   = "FIRST ATTR"
+  last_name    = "LAST ATTR"
+}
+
 resource "lldap_user_attribute" "test" {
   count          = 50
-  name           = "test-${count.index}"
-  attribute_type = "STRING"
-}
-
-output "user_attr" {
-  value = lldap_user_attribute.test
-}
-
-resource "lldap_user_attribute" "test_change" {
-  name           = "test-change"
+  name           = "test-change-${count.index}"
   attribute_type = "STRING"
   is_editable    = true
   is_list        = true
   is_visible     = false
 }
 
-output "user_attr_change" {
-  value = lldap_user_attribute.test_change
+output "user_attr" {
+  value = lldap_user_attribute.test
 }
 
+resource "lldap_user_attribute_assignment" "test" {
+  for_each     = toset([ for attr in lldap_user_attribute.test : attr.name ])
+  user_id      = lldap_user.user.id
+  attribute_id = each.value
+  value        = ["test-value: ${each.value}"]
+}
+
+output "user_attr_assignment" {
+  value = lldap_user_attribute_assignment.test
+}
