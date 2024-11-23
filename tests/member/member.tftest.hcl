@@ -8,4 +8,8 @@ run "test_member" {
     })
     error_message = "Member check failed"
   }
+  assert {
+    condition     = tolist(output.user.groups)[0].display_name == "Test member group"
+    error_message = "no or wrong computed group membership: ${nonsensitive(jsonencode(output.user))}"
+  }
 }
