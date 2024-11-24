@@ -19,6 +19,7 @@ import (
 func dataSourceUsers() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceUsersRead,
+		Description: "Reads all LLDAP users, without group memberships",
 		Schema: map[string]*schema.Schema{
 			"users": {
 				Type:        schema.TypeSet,

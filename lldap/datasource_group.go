@@ -17,6 +17,7 @@ import (
 func dataSourceGroup() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceGroupRead,
+		Description: "Reads a LLDAP group, including memberships",
 		Schema: map[string]*schema.Schema{
 			"attributes": {
 				Type:        schema.TypeSet,

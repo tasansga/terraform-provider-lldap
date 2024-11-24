@@ -34,6 +34,7 @@ func resourceMember() *schema.Resource {
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
+		Description: "Manages a LLDAP memberhip, i.e. a group-user relationship",
 		Schema: map[string]*schema.Schema{
 			"group_display_name": {
 				Type:        schema.TypeString,

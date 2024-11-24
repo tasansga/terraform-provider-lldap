@@ -35,7 +35,16 @@ terraform import lldap_group.example 1
 
 ### Read-Only
 
+- `attributes` (Set of Object) Attributes for this group (see [below for nested schema](#nestedatt--attributes))
 - `creation_date` (String) Metadata of group object creation
 - `id` (String) The unique group ID
 - `users` (Set of String) Set of users who are members of this group
 - `uuid` (String) UUID of group
+
+<a id="nestedatt--attributes"></a>
+### Nested Schema for `attributes`
+
+Read-Only:
+
+- `name` (String)
+- `value` (Set of String)

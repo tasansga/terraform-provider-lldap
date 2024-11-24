@@ -21,13 +21,14 @@ func resourceUserAttribute() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceUserAttributeCreate,
 		ReadContext:   resourceUserAttributeRead,
+		DeleteContext: resourceUserAttributeDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 				_ = d.Set("id", d.Id())
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
-		DeleteContext: resourceUserAttributeDelete,
+		Description: "Defines a new custom attribute schema for users",
 		Schema: map[string]*schema.Schema{
 			"attribute_type": {
 				Type:        schema.TypeString,

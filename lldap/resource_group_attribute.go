@@ -27,6 +27,7 @@ func resourceGroupAttribute() *schema.Resource {
 			},
 		},
 		DeleteContext: resourceGroupAttributeDelete,
+		Description:   "Defines a new custom attribute schema for groups",
 		Schema: map[string]*schema.Schema{
 			"attribute_type": {
 				Type:        schema.TypeString,
