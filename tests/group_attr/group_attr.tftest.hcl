@@ -17,3 +17,15 @@ run "test_group_attr_change" {
     error_message = jsonencode(output.group_attr)
   }
 }
+
+run "test_group_attr_assignment" {
+  assert {
+    condition = jsondecode(jsonencode(output.group_attr_assignment)) == jsondecode(jsonencode({
+      "attribute_id" : "test-change",
+      "group_id" : 4,
+      "id" : "4:test-change",
+      "value" : ["test-value: Test group"]
+    }))
+    error_message = "unexpected value for user attribute assignment: ${jsonencode(output.group_attr_assignment)}"
+  }
+}

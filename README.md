@@ -19,7 +19,8 @@ Check the [docs](./docs/index.md)!
 
 ## Develop
 
-Just run `make` in the repository root.
+Just run `make` in the repository root, this will lint, build, test, run `go mod tidy`
+and generate docs.
 
 Works for me with:
 - Go 1.23

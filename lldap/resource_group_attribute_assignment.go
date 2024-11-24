@@ -18,17 +18,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const resourceUserAttributeAssignmentIdSeparator = ":"
+const resourceGroupAttributeAssignmentIdSeparator = ":"
 
-func resourceUserAttributeAssignment() *schema.Resource {
+func resourceGroupAttributeAssignment() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceUserAttributeAssignmentCreate,
-		ReadContext:   resourceUserAttributeAssignmentRead,
-		DeleteContext: resourceUserAttributeAssignmentDelete,
+		CreateContext: resourceGroupAttributeAssignmentCreate,
+		ReadContext:   resourceGroupAttributeAssignmentRead,
+		DeleteContext: resourceGroupAttributeAssignmentDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 				id := d.Id()
-				_, _, found := strings.Cut(id, resourceUserAttributeAssignmentIdSeparator)
+				_, _, found := strings.Cut(id, resourceGroupAttributeAssignmentIdSeparator)
 				if !found {
 					return nil, fmt.Errorf("not a valid attribute assignment id: %s", id)
 				}
@@ -40,7 +40,7 @@ func resourceUserAttributeAssignment() *schema.Resource {
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The assignment 'ID', constructed as user_id:attribute_name",
+				Description: "The assignment 'ID', constructed as group_id:attribute_name",
 			},
 			"attribute_id": {
 				Type:        schema.TypeString,
@@ -48,11 +48,11 @@ func resourceUserAttributeAssignment() *schema.Resource {
 				ForceNew:    true,
 				Description: "The attribute name",
 			},
-			"user_id": {
-				Type:        schema.TypeString,
+			"group_id": {
+				Type:        schema.TypeInt,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The unique user ID",
+				Description: "The unique group ID",
 			},
 			"value": {
 				Type:        schema.TypeSet,
@@ -67,8 +67,8 @@ func resourceUserAttributeAssignment() *schema.Resource {
 	}
 }
 
-func resourceUserAttributeAssignmentCreate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	userId := d.Get("user_id").(string)
+func resourceGroupAttributeAssignmentCreate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	groupId := d.Get("group_id").(int)
 	attributeId := d.Get("attribute_id").(string)
 	valueRaw := d.Get("value").(*schema.Set)
 	valueRawList := valueRaw.List()
@@ -78,48 +78,48 @@ func resourceUserAttributeAssignmentCreate(ctx context.Context, d *schema.Resour
 	}
 	something, _ := json.Marshal(value)
 	tflog.Error(ctx, fmt.Sprintf("Got something: %s", string(something)))
-	id := fmt.Sprintf("%s%s%s", userId, resourceUserAttributeAssignmentIdSeparator, attributeId)
-	tflog.Debug(ctx, fmt.Sprintf("Will create user attribute assignment with id: %s", id))
+	id := fmt.Sprintf("%d%s%s", groupId, resourceGroupAttributeAssignmentIdSeparator, attributeId)
+	tflog.Debug(ctx, fmt.Sprintf("Will create group attribute assignment with id: %s", id))
 	d.SetId(id)
 	lc := m.(*LldapClient)
-	addAttrErr := lc.AddAttributeToUser(userId, attributeId, []string{})
+	addAttrErr := lc.AddAttributeToGroup(groupId, attributeId, []string{})
 	if addAttrErr != nil {
 		return addAttrErr
 	}
-	tflog.Info(ctx, fmt.Sprintf("Created user attribute assignment with id: %s", id))
+	tflog.Info(ctx, fmt.Sprintf("Created group attribute assignment with id: %s", id))
 	return nil
 }
 
-func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	userId := d.Get("user_id").(string)
+func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	groupId := d.Get("group_id").(int)
 	attributeId := d.Get("attribute_id").(string)
 	lc := m.(*LldapClient)
-	user, getUserErr := lc.GetUser(userId)
-	if getUserErr != nil {
-		return getUserErr
+	group, getGroupErr := lc.GetGroup(groupId)
+	if getGroupErr != nil {
+		return getGroupErr
 	}
-	userAttributes := make([]string, len(user.Attributes))
+	groupAttributes := make([]string, len(group.Attributes))
 	var value []string
-	for _, attr := range user.Attributes {
-		userAttributes = append(userAttributes, attr.Name)
+	for _, attr := range group.Attributes {
+		groupAttributes = append(groupAttributes, attr.Name)
 		if attr.Name == attributeId {
 			value = attr.Value
 		}
 	}
-	if !slices.Contains(userAttributes, attributeId) {
-		return diag.Errorf("User is missing attribute!")
+	if !slices.Contains(groupAttributes, attributeId) {
+		return diag.Errorf("Group is missing attribute!")
 	}
-	d.Set("user_id", userId)
+	d.Set("group_id", groupId)
 	d.Set("attribute_id", attributeId)
 	d.Set("values", value)
 	return nil
 }
 
-func resourceUserAttributeAssignmentDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	userId := d.Get("user_id").(string)
+func resourceGroupAttributeAssignmentDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	groupId := d.Get("group_id").(int)
 	attributeId := d.Get("attribute_id").(string)
 	lc := m.(*LldapClient)
-	removeAttrErr := lc.RemoveAttributeFromUser(userId, attributeId)
+	removeAttrErr := lc.RemoveAttributeFromGroup(groupId, attributeId)
 	if removeAttrErr != nil {
 		return removeAttrErr
 	}
