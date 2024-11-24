@@ -527,6 +527,27 @@ func (lc *LldapClient) DeleteUserAttribute(name string) diag.Diagnostics {
 	return nil
 }
 
+func (lc *LldapClient) AddAttributeToGroup(groupId int, attributeName string, attributeValue []string) diag.Diagnostics {
+	group, getGroupErr := lc.GetGroup(groupId)
+	if getGroupErr != nil {
+		return getGroupErr
+	}
+	return lc.updateGroup(group, nil, []LldapCustomAttribute{
+		{
+			Name:  attributeName,
+			Value: attributeValue,
+		},
+	})
+}
+
+func (lc *LldapClient) RemoveAttributeFromGroup(groupId int, attributeName string) diag.Diagnostics {
+	group, getGroupErr := lc.GetGroup(groupId)
+	if getGroupErr != nil {
+		return getGroupErr
+	}
+	return lc.updateGroup(group, []string{attributeName}, nil)
+}
+
 func (lc *LldapClient) AddAttributeToUser(userId string, attributeName string, attributeValue []string) diag.Diagnostics {
 	user, getUserErr := lc.GetUser(userId)
 	if getUserErr != nil {
@@ -691,9 +712,24 @@ func (lc *LldapClient) GetGroup(id int) (*LldapGroup, diag.Diagnostics) {
 }
 
 func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) diag.Diagnostics {
+	group, getGroupErr := lc.GetGroup(groupId)
+	if getGroupErr != nil {
+		return getGroupErr
+	}
+	group.DisplayName = displayName
+	return lc.updateGroup(group, nil, nil)
+}
+
+func (lc *LldapClient) updateGroup(
+	group *LldapGroup,
+	removeAttributes []string,
+	insertAttributes []LldapCustomAttribute,
+) diag.Diagnostics {
 	type UpdateGroupInput struct {
-		Id          int    `json:"id"`
-		DisplayName string `json:"displayName"`
+		Id               int                    `json:"id"`
+		DisplayName      string                 `json:"displayName"`
+		RemoveAttributes []string               `json:"removeAttributes"`
+		InsertAttributes []LldapCustomAttribute `json:"insertAttributes"`
 	}
 	type UpdateGroupDisplayNameVariables struct {
 		UpdateGroup UpdateGroupInput `json:"group"`
@@ -703,8 +739,10 @@ func (lc *LldapClient) UpdateGroupDisplayName(groupId int, displayName string) d
 		OperationName: "UpdateGroup",
 		Variables: UpdateGroupDisplayNameVariables{
 			UpdateGroup: UpdateGroupInput{
-				Id:          groupId,
-				DisplayName: displayName,
+				Id:               group.Id,
+				DisplayName:      group.DisplayName,
+				RemoveAttributes: removeAttributes,
+				InsertAttributes: insertAttributes,
 			},
 		},
 	}

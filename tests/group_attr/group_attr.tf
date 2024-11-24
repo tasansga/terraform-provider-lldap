@@ -25,6 +25,10 @@ provider "lldap" {
   base_dn  = var.lldap_base_dn
 }
 
+resource "lldap_group" "group" {
+  display_name = "Test group"
+}
+
 resource "lldap_group_attribute" "test" {
   count          = 50
   name           = "test-${count.index}"
@@ -46,3 +50,12 @@ output "group_attr_change" {
   value = lldap_group_attribute.test_change
 }
 
+resource "lldap_group_attribute_assignment" "test" {
+  group_id     = lldap_group.group.id
+  attribute_id = lldap_group_attribute.test_change.id
+  value        = ["test-value: ${lldap_group.group.display_name}"]
+}
+
+output "group_attr_assignment" {
+  value = lldap_group_attribute_assignment.test
+}
