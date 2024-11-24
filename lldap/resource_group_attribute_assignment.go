@@ -109,9 +109,15 @@ func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceD
 	if !slices.Contains(groupAttributes, attributeId) {
 		return diag.Errorf("Group is missing attribute!")
 	}
-	d.Set("group_id", groupId)
-	d.Set("attribute_id", attributeId)
-	d.Set("values", value)
+	for k, v := range map[string]interface{}{
+		"group_id":     groupId,
+		"attribute_id": attributeId,
+		"value":        value,
+	} {
+		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
+	}
 	return nil
 }
 
