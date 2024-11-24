@@ -109,9 +109,15 @@ func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceDa
 	if !slices.Contains(userAttributes, attributeId) {
 		return diag.Errorf("User is missing attribute!")
 	}
-	d.Set("user_id", userId)
-	d.Set("attribute_id", attributeId)
-	d.Set("values", value)
+	for k, v := range map[string]interface{}{
+		"user_id":      userId,
+		"attribute_id": attributeId,
+		"value":        value,
+	} {
+		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
+	}
 	return nil
 }
 
