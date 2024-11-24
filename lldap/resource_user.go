@@ -19,13 +19,14 @@ func resourceUser() *schema.Resource {
 		CreateContext: resourceUserCreate,
 		ReadContext:   resourceUserRead,
 		UpdateContext: resourceUserUpdate,
+		DeleteContext: resourceUserDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 				_ = d.Set("id", d.Id())
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
-		DeleteContext: resourceUserDelete,
+		Description: "Manages a LLDAP user",
 		Schema: map[string]*schema.Schema{
 			"attributes": {
 				Type:        schema.TypeSet,

@@ -36,6 +36,7 @@ func resourceUserAttributeAssignment() *schema.Resource {
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
+		Description: "Manage a custom attribute assignment for an user",
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,

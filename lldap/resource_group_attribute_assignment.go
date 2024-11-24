@@ -36,6 +36,7 @@ func resourceGroupAttributeAssignment() *schema.Resource {
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
+		Description: "Manage a custom attribute assignment for a group",
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,

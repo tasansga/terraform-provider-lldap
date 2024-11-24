@@ -26,6 +26,7 @@ data "lldap_user" "admin" {
 
 ### Read-Only
 
+- `attributes` (Set of Object) Custom attributes for this user (see [below for nested schema](#nestedatt--attributes))
 - `avatar` (String) Base 64 encoded JPEG image
 - `creation_date` (String) Metadata of user object creation
 - `display_name` (String) Display name of this user
@@ -36,10 +37,20 @@ data "lldap_user" "admin" {
 - `username` (String) The unique username
 - `uuid` (String) UUID of user
 
+<a id="nestedatt--attributes"></a>
+### Nested Schema for `attributes`
+
+Read-Only:
+
+- `name` (String)
+- `value` (Set of String)
+
+
 <a id="nestedatt--groups"></a>
 ### Nested Schema for `groups`
 
 Read-Only:
 
+- `creation_date` (String)
 - `display_name` (String)
-- `id` (Number)
+- `id` (String)

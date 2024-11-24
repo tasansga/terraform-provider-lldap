@@ -16,6 +16,7 @@ import (
 func dataSourceGroupAttributes() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceGroupAttributesRead,
+		Description: "Schema definitions for group attributes",
 		Schema: map[string]*schema.Schema{
 			"attributes": {
 				Type:        schema.TypeSet,

@@ -16,6 +16,7 @@ import (
 func dataSourceUserAttributes() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceUserAttributesRead,
+		Description: "Schema definitions for user attributes",
 		Schema: map[string]*schema.Schema{
 			"attributes": {
 				Type:        schema.TypeSet,

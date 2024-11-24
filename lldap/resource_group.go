@@ -26,6 +26,7 @@ func resourceGroup() *schema.Resource {
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
+		Description: "Manages a LLDAP group, without memberships",
 		Schema: map[string]*schema.Schema{
 			"creation_date": {
 				Type:        schema.TypeString,
