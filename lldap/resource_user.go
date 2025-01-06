@@ -195,14 +195,6 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 	if getUserErr != nil {
 		return getUserErr
 	}
-	password := d.Get("password").(string)
-	isValidPassword, bindErr := lc.IsValidPassword(user.Id, password)
-	if bindErr != nil {
-		return bindErr
-	}
-	if isValidPassword {
-		user.Password = password
-	}
 	setRdErr := resourceUserSetResourceData(d, user)
 	if setRdErr != nil {
 		return setRdErr
