@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -88,8 +89,17 @@ func resourceMemberCreate(_ context.Context, d *schema.ResourceData, m any) diag
 }
 
 func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	groupId := d.Get("group_id").(int)
-	userId := d.Get("user_id").(string)
+	id := d.Id()
+	groupIdString, userId, ok := strings.Cut(id, ResourceMemberIdSeparator)
+	if !ok {
+		return diag.Errorf("not a valid lldap_member id: %s", id)
+	}
+
+	groupId, err := strconv.Atoi(groupIdString)
+	if err != nil {
+		return diag.Errorf("group_id should be an integer: %v", err)
+	}
+
 	lc := m.(*LldapClient)
 	group, getGroupErr := lc.GetGroup(groupId)
 	if getGroupErr != nil {
