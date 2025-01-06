@@ -92,8 +92,12 @@ func resourceUserAttributeAssignmentCreate(ctx context.Context, d *schema.Resour
 }
 
 func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	userId := d.Get("user_id").(string)
-	attributeId := d.Get("attribute_id").(string)
+	id := d.Id()
+	userId, attributeId, ok := strings.Cut(id, resourceUserAttributeAssignmentIdSeparator)
+	if !ok {
+		return diag.Errorf("not a valid lldap_user_attribute_assignment id: %s", id)
+	}
+
 	lc := m.(*LldapClient)
 	user, getUserErr := lc.GetUser(userId)
 	if getUserErr != nil {

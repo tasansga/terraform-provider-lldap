@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -92,8 +93,17 @@ func resourceGroupAttributeAssignmentCreate(ctx context.Context, d *schema.Resou
 }
 
 func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	groupId := d.Get("group_id").(int)
-	attributeId := d.Get("attribute_id").(string)
+	id := d.Id()
+	groupIdString, attributeId, ok := strings.Cut(id, resourceGroupAttributeAssignmentIdSeparator)
+	if !ok {
+		return diag.Errorf("not a valid lldap_group_attribute_assignment id: %s", id)
+	}
+
+	groupId, err := strconv.Atoi(groupIdString)
+	if err != nil {
+		return diag.Errorf("group_id should be an integer: %v", err)
+	}
+
 	lc := m.(*LldapClient)
 	group, getGroupErr := lc.GetGroup(groupId)
 	if getGroupErr != nil {

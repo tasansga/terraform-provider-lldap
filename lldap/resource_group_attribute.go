@@ -137,7 +137,7 @@ func resourceGroupAttributeCreate(_ context.Context, d *schema.ResourceData, m a
 
 func resourceGroupAttributeRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	lc := m.(*LldapClient)
-	schema, getSchemaErr := lc.GetGroupAttributeSchema(d.Get("name").(string))
+	schema, getSchemaErr := lc.GetGroupAttributeSchema(d.Id())
 	if getSchemaErr != nil {
 		return getSchemaErr
 	}

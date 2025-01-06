@@ -155,7 +155,7 @@ func resourceUserAttributeCreate(_ context.Context, d *schema.ResourceData, m an
 
 func resourceUserAttributeRead(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	lc := m.(*LldapClient)
-	schema, getSchemaErr := lc.GetUserAttributeSchema(d.Get("name").(string))
+	schema, getSchemaErr := lc.GetUserAttributeSchema(d.Id())
 	if getSchemaErr != nil {
 		return getSchemaErr
 	}
