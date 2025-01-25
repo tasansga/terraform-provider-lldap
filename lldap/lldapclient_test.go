@@ -23,8 +23,10 @@ import (
 func getTestClient() LldapClient {
 	hostIp := os.Getenv("LLDAP_HOST")
 	password := os.Getenv("LLDAP_PASSWORD")
-	parsedHttpUrl, _ := url.Parse(fmt.Sprintf("http://%s:17170", hostIp))
-	parsedLdapUrl, _ := url.Parse(fmt.Sprintf("ldap://%s:3890", hostIp))
+	httpPort := os.Getenv("LLDAP_PORT_HTTP")
+	ldapPort := os.Getenv("LLDAP_PORT_LDAP")
+	parsedHttpUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", hostIp, httpPort))
+	parsedLdapUrl, _ := url.Parse(fmt.Sprintf("ldap://%s:%s", hostIp, ldapPort))
 	client := LldapClient{
 		Config: Config{
 			Context:  context.Background(),

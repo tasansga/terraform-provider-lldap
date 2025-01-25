@@ -24,26 +24,30 @@ function start_postgres_server {
     postgres_cnt_id=$(docker run \
         --detach \
         --rm \
+        -p 5432 \
         --env "POSTGRES_DB=lldap" \
         --env "POSTGRES_USER=postgres" \
         --env "POSTGRES_PASSWORD=${passwd}" \
         postgres:latest)
-    local postgres_cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$postgres_cnt_id")
+    local postgres_port=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort }}' "$postgres_cnt_id")
+    local postgres_cnt_ip="127.0.0.1"
 
     if [[ "$DEBUG" == "true" ]]
     then
         docker logs -f "$postgres_cnt_id" &
     fi
 
-    wait_for_service "$postgres_cnt_ip" 5432
+    wait_for_service "$postgres_cnt_ip" "$postgres_port"
 
     cat <<EOF
 export POSTGRES_CONTAINER_ID="$postgres_cnt_id"
 export POSTGRES_HOST="$postgres_cnt_ip"
+export POSTGRES_PORT="$postgres_port"
 export POSTGRES_PASSWORD="$passwd"
 EOF
     export POSTGRES_CONTAINER_ID="$postgres_cnt_id"
     export POSTGRES_HOST="$postgres_cnt_ip"
+    export POSTGRES_PORT="$postgres_port"
     export POSTGRES_PASSWORD="$passwd"
 }
 
@@ -52,38 +56,51 @@ function start_lldap_server {
     local lldap_cnt_id
     if [[ "$DATABASE" == "postgres" ]]
     then
-        database_url="postgres://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/lldap"
+        database_url="postgres://postgres:${POSTGRES_PASSWORD}@host.docker.internal:${POSTGRES_PORT}/lldap"
         lldap_cnt_id=$(docker run \
             --detach \
             --rm \
+            -p 17170 \
+            -p 3890 \
+            --add-host=host.docker.internal:host-gateway \
             --env "LLDAP_DATABASE_URL=${database_url}" \
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
             --env "LLDAP_LDAP_BASE_DN=dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
+            --env "LLDAP_JWT_SECRET=$(uuidgen)" \
             lldap/lldap:latest)
     else
         lldap_cnt_id=$(docker run \
             --detach \
             --rm \
+            -p 17170 \
+            -p 3890 \
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
             --env "LLDAP_LDAP_BASE_DN=dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
+            --env "LLDAP_JWT_SECRET=$(uuidgen)" \
             lldap/lldap:latest)
     fi
-    local lldap_cnt_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$lldap_cnt_id")
+    local lldap_port_http=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "17170/tcp") 0).HostPort }}' "$lldap_cnt_id")
+    local lldap_port_ldap=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "3890/tcp") 0).HostPort }}' "$lldap_cnt_id")
+    local lldap_cnt_ip="127.0.0.1"
 
     if [[ "$DEBUG" == "true" ]]
     then
         docker logs -f "$lldap_cnt_id" &
     fi
 
-    wait_for_service "$lldap_cnt_ip" 17170
+    wait_for_service "$lldap_cnt_ip" "$lldap_port_http"
 
     cat <<EOF
 export LLDAP_CONTAINER_ID="$lldap_cnt_id"
 export LLDAP_HOST="$lldap_cnt_ip"
+export LLDAP_PORT_HTTP="$lldap_port_http"
+export LLDAP_PORT_LDAP="$lldap_port_ldap"
 export LLDAP_PASSWORD="$passwd"
 EOF
     export LLDAP_CONTAINER_ID="$lldap_cnt_id"
     export LLDAP_HOST="$lldap_cnt_ip"
+    export LLDAP_PORT_HTTP="$lldap_port_http"
+    export LLDAP_PORT_LDAP="$lldap_port_ldap"
     export LLDAP_PASSWORD="$passwd"
 }
 
@@ -145,14 +162,14 @@ function run_integration_test {
     cd "$test_path"
     rm -Rvf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
     cat > "$test_path/.tfvars" << EOF
-lldap_http_url="http://${LLDAP_HOST}:17170"
-lldap_ldap_url="ldap://${LLDAP_HOST}:3890"
+lldap_http_url="http://${LLDAP_HOST}:${LLDAP_PORT_HTTP}"
+lldap_ldap_url="ldap://${LLDAP_HOST}:${LLDAP_PORT_LDAP}"
 lldap_username="admin"
 lldap_password="$LLDAP_PASSWORD"
 lldap_base_dn="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
 EOF
-    export LLDAP_HTTP_URL="http://${LLDAP_HOST}:17170"
-    export LLDAP_LDAP_URL="ldap://${LLDAP_HOST}:3890"
+    export LLDAP_HTTP_URL="http://${LLDAP_HOST}:${LLDAP_PORT_HTTP}"
+    export LLDAP_LDAP_URL="ldap://${LLDAP_HOST}:${LLDAP_PORT_LDAP}"
     export LLDAP_USERNAME="admin"
     export LLDAP_PASSWORD="$LLDAP_PASSWORD"
     tofu init -reconfigure -upgrade
@@ -174,8 +191,19 @@ function run_integration_tests {
     trap on_integration_test_exit EXIT
 
     cd "${tf_provider_lldap_root_dir}"
-    mkdir -p "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/"
-    cp "${tf_provider_lldap_root_dir}/dist/terraform-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/linux_amd64/terraform-provider-lldap"
+    # macos: arm64, linux: aarch64
+    if [[ $(uname -m) == "aarch64" ]] || [[ $(uname -m) == "arm64" ]]
+    then
+        tf_uname_arch="arm64"
+    elif [[ $(uname -m) == "x86_64" ]]
+    then
+        tf_uname_arch="amd64"
+    else
+        tf_uname_arch=$(uname -m)
+    fi
+    tf_uname=$(uname  | tr '[:upper:]' '[:lower:]')
+    mkdir -p "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/${tf_uname}_${tf_uname_arch}/"
+    cp "${tf_provider_lldap_root_dir}/dist/terraform-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/${tf_uname}_${tf_uname_arch}/terraform-provider-lldap"
 
     export TF_CLI_CONFIG_FILE="${temp_test_dir}/test.tfrc"
     cat > "$TF_CLI_CONFIG_FILE" << EOF
