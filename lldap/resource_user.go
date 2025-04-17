@@ -195,6 +195,12 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 	if getUserErr != nil {
 		return getUserErr
 	}
+	// We cannot read the password from LLDAP, but we can check whether the value from state is still valid.
+	statePassword := d.Get("password").(string)
+	isValidPassword, _ := lc.IsValidPassword(user.Id, statePassword)
+	if isValidPassword {
+		user.Password = statePassword
+	}
 	setRdErr := resourceUserSetResourceData(d, user)
 	if setRdErr != nil {
 		return setRdErr

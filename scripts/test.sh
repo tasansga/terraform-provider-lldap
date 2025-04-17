@@ -159,9 +159,10 @@ function run_integration_test {
     trap stop_server EXIT
 
     echo "Running test: ${test_path}"
+    export TF_IN_AUTOMATION="yeah"
     cd "$test_path"
     rm -Rvf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
-    cat > "$test_path/.tfvars" << EOF
+    cat > "$test_path/test.auto.tfvars" << EOF
 lldap_http_url="http://${LLDAP_HOST}:${LLDAP_PORT_HTTP}"
 lldap_ldap_url="ldap://${LLDAP_HOST}:${LLDAP_PORT_LDAP}"
 lldap_username="admin"
@@ -173,7 +174,13 @@ EOF
     export LLDAP_USERNAME="admin"
     export LLDAP_PASSWORD="$LLDAP_PASSWORD"
     tofu init -reconfigure -upgrade
-    tofu test -var-file="$test_path/.tfvars"
+    if [ -e "${test_path}/tofu.sh" ]
+    then
+        "${test_path}/tofu.sh"
+    else
+        tofu test
+    fi
+    unset "TF_IN_AUTOMATION"
 }
 
 function run_integration_tests {
