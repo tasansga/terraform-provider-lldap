@@ -173,14 +173,15 @@ func getLdapBindConnection(ldapUrl string, baseDn string, username string, passw
 
 func (lc *LldapClient) IsValidPassword(username string, password string) (bool, diag.Diagnostics) {
 	bind, bindErr := getLdapBindConnection(lc.Config.LdapUrl.String(), lc.Config.BaseDn, username, password)
+	if bind != nil {
+		defer bind.Close()
+	}
 	if bindErr != nil {
 		if strings.Contains(bindErr[len(bindErr)-1].Summary, "Invalid Credentials") {
 			return false, nil
-		} else {
-			return false, bindErr
 		}
+		return false, bindErr
 	}
-	defer bind.Close()
 	return true, nil
 }
 
