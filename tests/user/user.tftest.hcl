@@ -48,7 +48,7 @@ run "test_user" {
 run "test_users_map" {
   // Map is a data source so we need to retest the values from the resource
   assert {
-    condition     = length(keys(output.users_map)) == 1 + local.user_count // default "admin" plus our new users
+    condition     = length(keys(output.users_map)) == 1 + local.user_count + 1 // default "admin" plus our count new users plus newpasswd user
     error_message = "could not find users"
   }
   assert {
@@ -90,5 +90,12 @@ run "test_users_map" {
   assert {
     condition     = output.users_map["user1"].avatar == output.avatar_base64
     error_message = "Invalid value for user avatar base64"
+  }
+}
+
+run "test_nopasswd_user" {
+  assert {
+    condition     = output.nopasswd.password == null
+    error_message = "invalid value for no password"
   }
 }

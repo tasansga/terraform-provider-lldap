@@ -18,3 +18,15 @@ tofu apply -auto-approve
 tofu taint random_string.email_prefix
 tofu apply -auto-approve
 tofu apply -auto-approve -destroy
+
+# Ensure an user initially created without password can set one later
+tofu apply -auto-approve
+tofu apply -auto-approve -var nopasswd="yespasswd"
+tofu plan -detailed-exitcode -var nopasswd="yespasswd"
+tofu apply -auto-approve -destroy
+
+# Ensure an user initially created with password can remove it later
+tofu apply -auto-approve -var nopasswd="yespasswd"
+tofu apply -auto-approve
+tofu plan -detailed-exitcode
+tofu apply -auto-approve -destroy

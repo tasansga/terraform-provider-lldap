@@ -5,20 +5,20 @@ $(info $(shell mkdir -p $(DIST_DIR)))
 
 default: all
 
-all: lint modupdate build test run docs clean
+all: lint modupdate build test docs clean
 
 build:
 	go build -o "${DIST_DIR}/${BINARY_NAME}" main.go
 
 lint:
-	~/go/bin/tfproviderlintx -R001=false ./...
+	tfproviderlint -R001=false ./...
 
 modupdate:
 	go get -u
 	go mod tidy
 
 docs:
-	~/go/bin/tfplugindocs generate
+	tfplugindocs generate
 
 test: build
 	./scripts/test.sh

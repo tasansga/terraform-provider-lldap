@@ -38,9 +38,20 @@ resource "random_string" "email_prefix" {
 
 resource "lldap_user" "user" {
   username     = "user"
-  email        = "${random_string.email_prefix.result}@this.test"
+  email        = "user-${random_string.email_prefix.result}@this.test"
   password     = random_password.user.result
   display_name = "User"
   first_name   = "FIRST"
   last_name    = "LAST"
+}
+
+variable "nopasswd" {
+  type    = string
+  default = null
+}
+
+resource "lldap_user" "nopasswd" {
+  username     = "user-nopasswd-change"
+  email        = "nopasswd-${random_string.email_prefix.result}@this.test"
+  password     = var.nopasswd
 }
