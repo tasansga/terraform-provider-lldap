@@ -116,7 +116,7 @@ func resourceUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "Password for the user",
+				Description: "Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider",
 			},
 			"username": {
 				Type:        schema.TypeString,
@@ -146,11 +146,15 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 		"first_name":    user.FirstName,
 		"groups":        dataSourceGroupsParser(user.Groups),
 		"last_name":     user.LastName,
-		"password":      user.Password,
 		"username":      user.Id,
 		"uuid":          user.Uuid,
 	} {
 		if setErr := d.Set(k, v); setErr != nil {
+			return diag.FromErr(setErr)
+		}
+	}
+	if user.Password != "" {
+		if setErr := d.Set("password", user.Password); setErr != nil {
 			return diag.FromErr(setErr)
 		}
 	}
@@ -177,9 +181,11 @@ func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	if createErr != nil {
 		return createErr
 	}
-	setPwErr := lc.SetUserPassword(user.Id, user.Password)
-	if setPwErr != nil {
-		return setPwErr
+	if user.Password != "" {
+		setPwErr := lc.SetUserPassword(user.Id, user.Password)
+		if setPwErr != nil {
+			return setPwErr
+		}
 	}
 	d.SetId(user.Id)
 	setRdErr := resourceUserSetResourceData(d, &user)
@@ -197,9 +203,11 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 	}
 	// We cannot read the password from LLDAP, but we can check whether the value from state is still valid.
 	statePassword := d.Get("password").(string)
-	isValidPassword, _ := lc.IsValidPassword(user.Id, statePassword)
-	if isValidPassword {
-		user.Password = statePassword
+	if statePassword != "" {
+		isValidPassword, _ := lc.IsValidPassword(user.Id, statePassword)
+		if isValidPassword {
+			user.Password = statePassword
+		}
 	}
 	setRdErr := resourceUserSetResourceData(d, user)
 	if setRdErr != nil {
@@ -215,14 +223,16 @@ func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	if updateErr != nil {
 		return updateErr
 	}
-	isValidPassword, bindErr := lc.IsValidPassword(user.Id, user.Password)
-	if bindErr != nil {
-		return bindErr
-	}
-	if !isValidPassword {
-		setPwErr := lc.SetUserPassword(user.Id, user.Password)
-		if setPwErr != nil {
-			return setPwErr
+	if user.Password != "" {
+		isValidPassword, bindErr := lc.IsValidPassword(user.Id, user.Password)
+		if bindErr != nil {
+			return bindErr
+		}
+		if !isValidPassword {
+			setPwErr := lc.SetUserPassword(user.Id, user.Password)
+			if setPwErr != nil {
+				return setPwErr
+			}
 		}
 	}
 	return nil

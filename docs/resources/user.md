@@ -46,7 +46,7 @@ terraform import lldap_user.example admin
 - `display_name` (String) Display name of this user
 - `first_name` (String) First name of this user
 - `last_name` (String) Last name of this user
-- `password` (String, Sensitive) Password for the user
+- `password` (String, Sensitive) Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider
 
 ### Read-Only
 
