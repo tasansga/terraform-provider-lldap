@@ -25,11 +25,7 @@ provider "lldap" {
   base_dn  = var.lldap_base_dn
 }
 
-resource "random_password" "user" {
-  length = 16
-}
-
-resource "random_string" "email_prefix" {
+resource "random_string" "test" {
   length  = 8
   special = false
   upper   = false
@@ -37,20 +33,25 @@ resource "random_string" "email_prefix" {
 
 resource "lldap_user" "user" {
   username     = "user"
-  email        = "user-${random_string.email_prefix.result}@this.test"
-  password     = random_password.user.result
+  email        = "user-${random_string.test.result}@this.test"
   display_name = "User"
   first_name   = "FIRST"
   last_name    = "LAST"
 }
 
-variable "nopasswd" {
-  type    = string
-  default = null
+output "user_id" {
+  value = lldap_user.user.id
 }
 
-resource "lldap_user" "nopasswd" {
-  username     = "user-nopasswd-change"
-  email        = "nopasswd-${random_string.email_prefix.result}@this.test"
-  password     = var.nopasswd
+resource "lldap_group" "group" {
+  display_name = "Test group ${random_string.test.result}"
+}
+
+output "group_id" {
+  value = lldap_group.group.id
+}
+
+resource "lldap_member" "member" {
+  group_id = lldap_group.group.id
+  user_id  = lldap_user.user.id
 }
