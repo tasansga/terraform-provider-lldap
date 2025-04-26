@@ -110,7 +110,7 @@ func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 		groupMembers = append(groupMembers, user.Id)
 	}
 	if !slices.Contains(groupMembers, userId) {
-		return diag.Errorf("User not a member of group!")
+		d.SetId("")
 	}
 	return nil
 }

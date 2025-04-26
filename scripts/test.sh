@@ -174,9 +174,9 @@ EOF
     export LLDAP_USERNAME="admin"
     export LLDAP_PASSWORD="$LLDAP_PASSWORD"
     tofu init -reconfigure -upgrade
-    if [ -e "${test_path}/tofu.sh" ]
+    if [ -e "${test_path}/test.sh" ]
     then
-        "${test_path}/tofu.sh"
+        "${test_path}/test.sh"
     else
         tofu test
     fi

@@ -35,10 +35,10 @@ provider "lldap" {
 
 - `http_url` (String) HTTP URL in the format `http[s]://(hostname)[:port]`, can be set using the `LLDAP_HTTP_URL` environment variable
 - `ldap_url` (String) LDAP URL in the format `ldap[s]://(hostname)[:port]`, can be set using the `LLDAP_LDAP_URL` environment variable
-- `password` (String) admin account password, can be set using the `LLDAP_PASSWORD` environment variable
 
 ### Optional
 
 - `base_dn` (String) Base DN, defaults to `dc=example,dc=com`
 - `insecure_skip_cert_check` (Boolean) Disable check for valid certificate chain for https/ldaps (default: `false`)
+- `password` (String) admin account password, can be set using the `LLDAP_PASSWORD` environment variable
 - `username` (String) admin account username, defaults to `admin`
