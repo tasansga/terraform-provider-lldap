@@ -53,18 +53,18 @@ https://github.com/lldap/lldap/blob/main/scripts/bootstrap.sh
 */
 
 type LldapClientQuery struct {
-	Query         string      `json:"query"`
-	OperationName string      `json:"operationName"`
-	Variables     interface{} `json:"variables"`
+	Query         string `json:"query"`
+	OperationName string `json:"operationName"`
+	Variables     any    `json:"variables"`
 }
 
 type LldapClientError struct {
-	Message   string        `json:"message"`
-	Locations []interface{} `json:"locations"`
-	Path      []string      `json:"path"`
+	Message   string   `json:"message"`
+	Locations []any    `json:"locations"`
+	Path      []string `json:"path"`
 }
 
-type LldapClientResponse[T interface{}] struct {
+type LldapClientResponse[T any] struct {
 	Data   *T                 `json:"data"`
 	Errors []LldapClientError `json:"errors"`
 }
@@ -108,6 +108,14 @@ type LldapGroup struct {
 	Attributes   []LldapCustomAttribute `json:"attributes"`
 }
 
+func (group *LldapGroup) GetUserIds() []string {
+	userIds := make([]string, len(group.Users))
+	for i, user := range group.Users {
+		userIds[i] = user.Id
+	}
+	return userIds
+}
+
 type LldapUser struct {
 	Id           string                 `json:"id"`
 	Password     string                 `json:"password"`
@@ -120,6 +128,14 @@ type LldapUser struct {
 	Avatar       string                 `json:"avatar"`
 	Groups       []LldapGroup           `json:"groups"`
 	Attributes   []LldapCustomAttribute `json:"attributes"`
+}
+
+func (user *LldapUser) GetGroupIds() []int {
+	groupIds := make([]int, len(user.Groups))
+	for i, group := range user.Groups {
+		groupIds[i] = group.Id
+	}
+	return groupIds
 }
 
 func (user *LldapUser) GetCustomAttributes() []LldapCustomAttribute {

@@ -66,30 +66,7 @@ func dataSourceUser() *schema.Resource {
 				Computed:    true,
 				Description: "First name of this user",
 			},
-			"groups": {
-				Type:        schema.TypeSet,
-				Computed:    true,
-				Description: "Groups where the user is a member",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"creation_date": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Metadata of group object creation",
-						},
-						"display_name": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "Display name of the group",
-						},
-						"id": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "The unique group ID",
-						},
-					},
-				},
-			},
+			"groups": &dataSourceGroupsSchema,
 			"id": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -125,7 +102,7 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 		return getUserErr
 	}
 	d.SetId(user.Id)
-	for k, v := range map[string]interface{}{
+	for k, v := range map[string]any{
 		"attributes":    attributesParser(user.Attributes),
 		"avatar":        user.Avatar,
 		"creation_date": user.CreationDate,

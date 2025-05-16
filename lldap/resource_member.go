@@ -25,7 +25,7 @@ func resourceMember() *schema.Resource {
 		ReadContext:   resourceMemberRead,
 		DeleteContext: resourceMemberDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
 				id := d.Id()
 				_, _, found := strings.Cut(id, ResourceMemberIdSeparator)
 				if !found {

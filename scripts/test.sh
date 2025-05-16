@@ -7,6 +7,7 @@
 set -eo pipefail
 
 readonly DATABASE="postgres"
+readonly TEST="$1"
 
 function wait_for_service {
     local host="$1"
@@ -225,13 +226,16 @@ provider_installation {
 }
 EOF
 
-    for f in $tf_provider_lldap_root_dir/tests/*
-    do
-        if [[ -d "$f" ]]
-        then
+    if [ -z "$TEST" ]
+    then
+        for f in $tf_provider_lldap_root_dir/tests/*
+        do
             run_integration_test "$f"
-        fi
-    done
+        done
+    else
+        f="${tf_provider_lldap_root_dir}/tests/${TEST}"
+        run_integration_test "$f"
+    fi
 }
 
 if [[ -z ${MAKE_TERMOUT+x} ]]

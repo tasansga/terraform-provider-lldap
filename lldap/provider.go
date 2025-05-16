@@ -61,10 +61,12 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"lldap_group_attribute_assignment": resourceGroupAttributeAssignment(),
 			"lldap_group_attribute":            resourceGroupAttribute(),
+			"lldap_group_memberships":          resourceGroupMemberships(),
 			"lldap_group":                      resourceGroup(),
 			"lldap_member":                     resourceMember(),
 			"lldap_user_attribute_assignment":  resourceUserAttributeAssignment(),
 			"lldap_user_attribute":             resourceUserAttribute(),
+			"lldap_user_memberships":           resourceUserMemberships(),
 			"lldap_user":                       resourceUser(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
@@ -145,4 +147,29 @@ func attributesParser(attrs []LldapCustomAttribute) []map[string]any {
 		result[i] = attr
 	}
 	return result
+}
+
+var dataSourceGroupsSchema = schema.Schema{
+	Type:        schema.TypeSet,
+	Computed:    true,
+	Description: "Groups where the user is a member",
+	Elem: &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"creation_date": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Metadata of group object creation",
+			},
+			"display_name": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Display name of the group",
+			},
+			"id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The unique group ID",
+			},
+		},
+	},
 }

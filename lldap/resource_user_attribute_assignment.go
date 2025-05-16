@@ -26,7 +26,7 @@ func resourceUserAttributeAssignment() *schema.Resource {
 		ReadContext:   resourceUserAttributeAssignmentRead,
 		DeleteContext: resourceUserAttributeAssignmentDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
 				id := d.Id()
 				_, _, found := strings.Cut(id, resourceUserAttributeAssignmentIdSeparator)
 				if !found {
@@ -114,7 +114,7 @@ func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceDa
 	if !slices.Contains(userAttributes, attributeId) {
 		return diag.Errorf("User is missing attribute!")
 	}
-	for k, v := range map[string]interface{}{
+	for k, v := range map[string]any{
 		"user_id":      userId,
 		"attribute_id": attributeId,
 		"value":        value,

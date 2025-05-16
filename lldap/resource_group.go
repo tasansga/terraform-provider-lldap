@@ -21,7 +21,7 @@ func resourceGroup() *schema.Resource {
 		UpdateContext: resourceGroupUpdate,
 		DeleteContext: resourceGroupDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
 				_ = d.Set("id", d.Id())
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
@@ -83,7 +83,7 @@ func resourceGroup() *schema.Resource {
 }
 
 func resourceGroupSetResourceData(d *schema.ResourceData, group *LldapGroup) diag.Diagnostics {
-	for k, v := range map[string]interface{}{
+	for k, v := range map[string]any{
 		"attributes":    attributesParser(group.Attributes),
 		"creation_date": group.CreationDate,
 		"display_name":  group.DisplayName,
@@ -98,7 +98,7 @@ func resourceGroupSetResourceData(d *schema.ResourceData, group *LldapGroup) dia
 }
 
 func resourceGroupUsersParser(llusers []LldapUser) *schema.Set {
-	result := make([]interface{}, len(llusers))
+	result := make([]any, len(llusers))
 	for i, lluser := range llusers {
 		result[i] = lluser.Id
 	}
