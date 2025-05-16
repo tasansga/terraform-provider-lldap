@@ -23,7 +23,7 @@ func resourceUserAttribute() *schema.Resource {
 		ReadContext:   resourceUserAttributeRead,
 		DeleteContext: resourceUserAttributeDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
 				_ = d.Set("id", d.Id())
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
@@ -92,7 +92,7 @@ func resourceUserAttribute() *schema.Resource {
 
 func resourceUserAttributeSetResourceData(d *schema.ResourceData, schema *LldapUserAttributeSchema) diag.Diagnostics {
 	d.SetId(schema.Name)
-	for k, v := range map[string]interface{}{
+	for k, v := range map[string]any{
 		"name":           schema.Name,
 		"attribute_type": schema.AttributeType,
 		"is_list":        schema.IsList,

@@ -2,11 +2,11 @@
 
 set -exo pipefail
 
-# Ensure plan does not change
+echo "Ensure plan does not change"
 tofu apply -auto-approve
 tofu plan -detailed-exitcode
 
-# Remove member out of band
+echo "Removing member out of band"
 auth_data="$(jo -- username="admin" password="$LLDAP_PASSWORD")"
 auth_response="$(curl \
     --silent \
@@ -29,7 +29,7 @@ curl \
     --header 'Content-Type: application/json' \
     --data "$data"
 
-# Ensure member is recreated correctly
+echo "Ensure member is recreated correctly"
 tofu apply -auto-approve
 tofu plan -detailed-exitcode
 tofu apply -auto-approve -destroy

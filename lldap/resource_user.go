@@ -21,7 +21,7 @@ func resourceUser() *schema.Resource {
 		UpdateContext: resourceUserUpdate,
 		DeleteContext: resourceUserDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
 				_ = d.Set("id", d.Id())
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
@@ -77,30 +77,7 @@ func resourceUser() *schema.Resource {
 				Default:     "",
 				Description: "First name of this user",
 			},
-			"groups": {
-				Type:        schema.TypeSet,
-				Computed:    true,
-				Description: "Groups where the user is a member",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"creation_date": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Metadata of group object creation",
-						},
-						"display_name": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "Display name of the group",
-						},
-						"id": {
-							Type:        schema.TypeString,
-							Computed:    true,
-							Description: "The unique group ID",
-						},
-					},
-				},
-			},
+			"groups": &dataSourceGroupsSchema,
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -137,7 +114,7 @@ func resourceUser() *schema.Resource {
 }
 
 func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.Diagnostics {
-	for k, v := range map[string]interface{}{
+	for k, v := range map[string]any{
 		"attributes":    attributesParser(user.Attributes),
 		"avatar":        user.Avatar,
 		"creation_date": user.CreationDate,

@@ -99,7 +99,7 @@ func dataSourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.
 		return getGroupErr
 	}
 	d.SetId(strconv.Itoa(llgroup.Id))
-	for k, v := range map[string]interface{}{
+	for k, v := range map[string]any{
 		"display_name":  llgroup.DisplayName,
 		"creation_date": llgroup.CreationDate,
 		"users":         dataSourceGroupUsersParser(llgroup.Users),

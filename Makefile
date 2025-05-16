@@ -20,8 +20,9 @@ modupdate:
 docs:
 	tfplugindocs generate
 
+# Run a specific test like this: make test TEST=test-directory-name
 test: build
-	./scripts/test.sh
+	./scripts/test.sh $(TEST)
 
 debug:
 	DEBUG_LOCAL=yes go run main.go
