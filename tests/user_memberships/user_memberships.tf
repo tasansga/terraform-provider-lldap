@@ -17,6 +17,14 @@ variable "lldap_username" {}
 variable "lldap_password" {}
 variable "lldap_base_dn" {}
 
+variable "num_groups" {
+  default = 10
+}
+
+variable "max_groups" {
+  default = 10
+}
+
 provider "lldap" {
   http_url = var.lldap_http_url
   ldap_url = var.lldap_ldap_url
@@ -45,19 +53,72 @@ resource "lldap_user" "user" {
 }
 
 resource "lldap_group" "test" {
-  count        = 10
+  count        = var.max_groups
   display_name = "Test group ${count.index}"
 }
 
 resource "lldap_user_memberships" "user" {
   user_id    = lldap_user.user.id
-  group_ids  = toset([ for group in lldap_group.test: group.id ])
+  group_ids  = toset([ for group in slice(lldap_group.test,0, var.num_groups): group.id ])
+  depends_on = [lldap_user.user]
 }
 
-output "groups" {
+# Data sources for verification
+data "lldap_user" "test_user" {
+  id = lldap_user.user.id
+  depends_on = [lldap_user_memberships.user]
+}
+
+data "lldap_users" "all_users" {
+  depends_on = [lldap_user.user]
+}
+
+data "lldap_groups" "all_groups" {
+  depends_on = [lldap_group.test]
+}
+
+# Individual group data sources to verify memberships
+data "lldap_group" "test_groups" {
+  count = var.num_groups
+  id = lldap_group.test[count.index].id
+  depends_on = [lldap_user_memberships.user]
+}
+
+# Outputs for verification
+output "user_memberships" {
+  value = lldap_user_memberships.user
+}
+
+output "test_user" {
+  value     = lldap_user.user
+  sensitive = true
+}
+
+output "test_user_detailed" {
+  value     = data.lldap_user.test_user
+  sensitive = true
+}
+
+output "all_users" {
+  value = data.lldap_users.all_users.users
+}
+
+output "all_groups" {
+  value = data.lldap_groups.all_groups.groups
+}
+
+output "test_groups" {
   value = lldap_group.test
 }
 
-output "user_memberships" {
-  value = lldap_user_memberships.user
+output "test_groups_detailed" {
+  value = data.lldap_group.test_groups
+}
+
+output "num_groups" {
+  value = var.num_groups
+}
+
+output "max_groups" {
+  value = var.max_groups
 }

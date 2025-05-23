@@ -1,4 +1,5 @@
 /dist/
+/cmd/terraform-provider-lldap/docs
 /.vscode
 .terraform
 .terraform.lock.hcl
@@ -6,5 +7,4 @@
 terraform.tfstate
 terraform.tfstate.backup
 errored_test.tfstate
-
 dist/

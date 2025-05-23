@@ -103,6 +103,11 @@ func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 	lc := m.(*LldapClient)
 	group, getGroupErr := lc.GetGroup(groupId)
 	if getGroupErr != nil {
+		// If the group was not found, mark the resource as deleted so Terraform will recreate it
+		if isEntityNotFoundError(getGroupErr) {
+			d.SetId("")
+			return nil
+		}
 		return getGroupErr
 	}
 	groupMembers := make([]string, len(group.Users))

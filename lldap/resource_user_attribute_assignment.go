@@ -24,6 +24,7 @@ func resourceUserAttributeAssignment() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceUserAttributeAssignmentCreate,
 		ReadContext:   resourceUserAttributeAssignmentRead,
+		UpdateContext: resourceUserAttributeAssignmentUpdate,
 		DeleteContext: resourceUserAttributeAssignmentDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
@@ -58,7 +59,6 @@ func resourceUserAttributeAssignment() *schema.Resource {
 			"value": {
 				Type:        schema.TypeSet,
 				Required:    true,
-				ForceNew:    true,
 				Description: "The value(s) for this attribute",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -83,7 +83,7 @@ func resourceUserAttributeAssignmentCreate(ctx context.Context, d *schema.Resour
 	tflog.Debug(ctx, fmt.Sprintf("Will create user attribute assignment with id: %s", id))
 	d.SetId(id)
 	lc := m.(*LldapClient)
-	addAttrErr := lc.AddAttributeToUser(userId, attributeId, []string{})
+	addAttrErr := lc.AddAttributeToUser(userId, attributeId, value)
 	if addAttrErr != nil {
 		return addAttrErr
 	}
@@ -101,6 +101,11 @@ func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceDa
 	lc := m.(*LldapClient)
 	user, getUserErr := lc.GetUser(userId)
 	if getUserErr != nil {
+		// If the user was not found, mark the resource as deleted so Terraform will recreate it
+		if isEntityNotFoundError(getUserErr) {
+			d.SetId("")
+			return nil
+		}
 		return getUserErr
 	}
 	userAttributes := make([]string, len(user.Attributes))
@@ -112,7 +117,9 @@ func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceDa
 		}
 	}
 	if !slices.Contains(userAttributes, attributeId) {
-		return diag.Errorf("User is missing attribute!")
+		// If the attribute assignment no longer exists, mark the resource as deleted
+		d.SetId("")
+		return nil
 	}
 	for k, v := range map[string]any{
 		"user_id":      userId,
@@ -123,6 +130,32 @@ func resourceUserAttributeAssignmentRead(_ context.Context, d *schema.ResourceDa
 			return diag.FromErr(setErr)
 		}
 	}
+	return nil
+}
+
+func resourceUserAttributeAssignmentUpdate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	userId := d.Get("user_id").(string)
+	attributeId := d.Get("attribute_id").(string)
+	valueRaw := d.Get("value").(*schema.Set)
+	valueRawList := valueRaw.List()
+	value := make([]string, len(valueRawList))
+	for i, vRaw := range valueRawList {
+		value[i] = vRaw.(string)
+	}
+	lc := m.(*LldapClient)
+
+	// First remove the existing attribute
+	removeAttrErr := lc.RemoveAttributeFromUser(userId, attributeId)
+	if removeAttrErr != nil {
+		return removeAttrErr
+	}
+
+	// Then add it back with the new values
+	updateAttrErr := lc.AddAttributeToUser(userId, attributeId, value)
+	if updateAttrErr != nil {
+		return updateAttrErr
+	}
+	tflog.Info(ctx, fmt.Sprintf("Updated user attribute assignment with id: %s", d.Id()))
 	return nil
 }
 

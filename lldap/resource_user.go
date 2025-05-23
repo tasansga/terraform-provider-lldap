@@ -176,6 +176,11 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 	lc := m.(*LldapClient)
 	user, getUserErr := lc.GetUser(d.Id())
 	if getUserErr != nil {
+		// If the user was not found, mark the resource as deleted so Terraform will recreate it
+		if isEntityNotFoundError(getUserErr) {
+			d.SetId("")
+			return nil
+		}
 		return getUserErr
 	}
 	// We cannot read the password from LLDAP, but we can check whether the value from state is still valid.

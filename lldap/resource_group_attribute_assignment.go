@@ -25,6 +25,7 @@ func resourceGroupAttributeAssignment() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceGroupAttributeAssignmentCreate,
 		ReadContext:   resourceGroupAttributeAssignmentRead,
+		UpdateContext: resourceGroupAttributeAssignmentUpdate,
 		DeleteContext: resourceGroupAttributeAssignmentDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
@@ -59,7 +60,6 @@ func resourceGroupAttributeAssignment() *schema.Resource {
 			"value": {
 				Type:        schema.TypeSet,
 				Required:    true,
-				ForceNew:    true,
 				Description: "The value(s) for this attribute",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -84,7 +84,7 @@ func resourceGroupAttributeAssignmentCreate(ctx context.Context, d *schema.Resou
 	tflog.Debug(ctx, fmt.Sprintf("Will create group attribute assignment with id: %s", id))
 	d.SetId(id)
 	lc := m.(*LldapClient)
-	addAttrErr := lc.AddAttributeToGroup(groupId, attributeId, []string{})
+	addAttrErr := lc.AddAttributeToGroup(groupId, attributeId, value)
 	if addAttrErr != nil {
 		return addAttrErr
 	}
@@ -129,6 +129,32 @@ func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceD
 			return diag.FromErr(setErr)
 		}
 	}
+	return nil
+}
+
+func resourceGroupAttributeAssignmentUpdate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
+	groupId := d.Get("group_id").(int)
+	attributeId := d.Get("attribute_id").(string)
+	valueRaw := d.Get("value").(*schema.Set)
+	valueRawList := valueRaw.List()
+	value := make([]string, len(valueRawList))
+	for i, vRaw := range valueRawList {
+		value[i] = vRaw.(string)
+	}
+	lc := m.(*LldapClient)
+
+	// First remove the existing attribute
+	removeAttrErr := lc.RemoveAttributeFromGroup(groupId, attributeId)
+	if removeAttrErr != nil {
+		return removeAttrErr
+	}
+
+	// Then add it back with the new values
+	updateAttrErr := lc.AddAttributeToGroup(groupId, attributeId, value)
+	if updateAttrErr != nil {
+		return updateAttrErr
+	}
+	tflog.Info(ctx, fmt.Sprintf("Updated group attribute assignment with id: %s", d.Id()))
 	return nil
 }
 
