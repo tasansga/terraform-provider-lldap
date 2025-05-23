@@ -7,7 +7,7 @@
 set -eo pipefail
 
 readonly DATABASE="postgres"
-readonly TEST="$1"
+readonly COMMAND="$1"
 
 function wait_for_service {
     local host="$1"
@@ -21,7 +21,7 @@ function wait_for_service {
 }
 
 function start_postgres_server {
-    local passwd=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    local passwd=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
     postgres_cnt_id=$(docker run \
         --detach \
         --rm \
@@ -30,7 +30,7 @@ function start_postgres_server {
         --env "POSTGRES_USER=postgres" \
         --env "POSTGRES_PASSWORD=${passwd}" \
         postgres:latest)
-    local postgres_port=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort }}' "$postgres_cnt_id")
+    local postgres_port=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "5432/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' "$postgres_cnt_id")
     local postgres_cnt_ip="127.0.0.1"
 
     if [[ "$DEBUG" == "true" ]]
@@ -53,7 +53,7 @@ EOF
 }
 
 function start_lldap_server {
-    local passwd=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    local passwd=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
     local lldap_cnt_id
     if [[ "$DATABASE" == "postgres" ]]
     then
@@ -80,8 +80,8 @@ function start_lldap_server {
             --env "LLDAP_JWT_SECRET=$(uuidgen)" \
             lldap/lldap:latest)
     fi
-    local lldap_port_http=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "17170/tcp") 0).HostPort }}' "$lldap_cnt_id")
-    local lldap_port_ldap=$(docker inspect --format '{{ (index (index .NetworkSettings.Ports "3890/tcp") 0).HostPort }}' "$lldap_cnt_id")
+    local lldap_port_http=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "17170/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' "$lldap_cnt_id")
+    local lldap_port_ldap=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "3890/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' "$lldap_cnt_id")
     local lldap_cnt_ip="127.0.0.1"
 
     if [[ "$DEBUG" == "true" ]]
@@ -145,12 +145,36 @@ function stop_server {
     stop_lldap_server
 }
 
+function run_unit_test_cli {
+    echo "Running CLI unit tests..."
+    go test -v ./cmd/lldap-cli
+}
+
 function run_unit_test {
+    echo "Running unit tests..."
+    go test -v ./lldap
+}
+
+function run_integration_test_cli {
+    echo "Running CLI integration tests..."
     start_server
     trap stop_server RETURN
     trap stop_server EXIT
 
-    go test ./lldap
+    LLDAP_BASE_DN="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
+        LLDAP_HTTP_URL="http://${LLDAP_HOST}:${LLDAP_PORT_HTTP}" \
+        LLDAP_LDAP_URL="ldap://${LLDAP_HOST}:${LLDAP_PORT_LDAP}" \
+        LLDAP_PASSWORD="$LLDAP_PASSWORD" \
+        go test -tags=integration -v ./cmd/lldap-cli
+}
+
+function run_integration_test_lldap {
+    echo "Running lldap package integration tests..."
+    start_server
+    trap stop_server RETURN
+    trap stop_server EXIT
+
+    go test -tags=integration -v ./lldap
 }
 
 function run_integration_test {
@@ -249,6 +273,33 @@ then
         stop_server
     fi
 else
-    run_unit_test
-    run_integration_tests
+    case $COMMAND in
+        unittest)
+            run_unit_test
+            ;;
+        unittest-cli)
+            run_unit_test_cli
+            ;;
+        inttest)
+            run_integration_tests
+            ;;
+        inttest-cli)
+            run_integration_test_cli
+            ;;
+        inttest-lldap)
+            run_integration_test_lldap
+            ;;
+        all)
+            echo "Running all tests..."
+            run_unit_test
+            run_unit_test_cli
+            run_integration_test_lldap
+            run_integration_test_cli
+            run_integration_tests
+            ;;
+        *)
+            echo "Invalid option. Use: unittest, unittest-cli, inttest, inttest-cli, inttest-lldap, or all."
+            exit 1
+            ;;
+    esac
 fi

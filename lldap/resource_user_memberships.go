@@ -118,6 +118,11 @@ func resourceUserMembershipsRead(ctx context.Context, d *schema.ResourceData, m 
 	userId := d.Get("user_id").(string)
 	user, getUserErr := lc.GetUser(userId)
 	if getUserErr != nil {
+		// If the user was not found, mark the resource as deleted so Terraform will recreate it
+		if isEntityNotFoundError(getUserErr) {
+			d.SetId("")
+			return nil
+		}
 		return getUserErr
 	}
 	setRdErr := resourceUserMembershipsSetResourceData(d, user)

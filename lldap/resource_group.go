@@ -130,6 +130,11 @@ func resourceGroupRead(_ context.Context, d *schema.ResourceData, m any) diag.Di
 	}
 	group, getGroupErr := lc.GetGroup(groupId)
 	if getGroupErr != nil {
+		// If the group was not found, mark the resource as deleted so Terraform will recreate it
+		if isEntityNotFoundError(getGroupErr) {
+			d.SetId("")
+			return nil
+		}
 		return getGroupErr
 	}
 	setRdErr := resourceGroupSetResourceData(d, group)

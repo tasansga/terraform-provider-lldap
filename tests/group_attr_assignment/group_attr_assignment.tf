@@ -31,16 +31,10 @@ variable "test_is_list" {
   default     = false
 }
 
-variable "test_is_visible" {
-  description = "Whether the attribute is visible"
-  type        = bool
-  default     = true
-}
-
-variable "test_is_editable" {
-  description = "Whether the attribute is editable"
-  type        = bool
-  default     = true
+variable "test_values" {
+  description = "Values to assign to the attribute"
+  type        = list(string)
+  default     = ["test-value-1"]
 }
 
 provider "lldap" {
@@ -58,25 +52,45 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
-# Test user attribute resource
-resource "lldap_user_attribute" "test_attr" {
-  name           = "testuserattr${random_string.suffix.result}"
+# Create a test group
+resource "lldap_group" "test_group" {
+  display_name = "Test Group ${random_string.suffix.result}"
+}
+
+# Create a custom group attribute
+resource "lldap_group_attribute" "test_attr" {
+  name           = "testgroupattr"
   attribute_type = var.test_attribute_type
   is_list        = var.test_is_list
-  is_visible     = var.test_is_visible
-  is_editable    = var.test_is_editable
+  is_visible     = true
+}
+
+# Assign values to the custom attribute for the group
+resource "lldap_group_attribute_assignment" "test_assignment" {
+  group_id     = lldap_group.test_group.id
+  attribute_id = lldap_group_attribute.test_attr.id
+  value        = var.test_attribute_type == "JPEG_PHOTO" ? [filebase64("${path.module}/test.jpeg")] : var.test_values
 }
 
 # Data sources for validation
-data "lldap_user_attributes" "user_attrs" {
-  depends_on = [lldap_user_attribute.test_attr]
+data "lldap_group" "test_group" {
+  id = lldap_group.test_group.id
+  depends_on = [lldap_group_attribute_assignment.test_assignment]
 }
 
 # Outputs for testing
-output "test_user_attr" {
-  value = lldap_user_attribute.test_attr
+output "test_group" {
+  value = lldap_group.test_group
 }
 
-output "user_attrs" {
-  value = data.lldap_user_attributes.user_attrs
+output "test_group_attr" {
+  value = lldap_group_attribute.test_attr
+}
+
+output "test_assignment" {
+  value = lldap_group_attribute_assignment.test_assignment
+}
+
+output "group_with_attributes" {
+  value = data.lldap_group.test_group
 }

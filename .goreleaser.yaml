@@ -8,7 +8,9 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  - id: terraform-provider-lldap
+    main: ./cmd/terraform-provider/lldap/main.go
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
@@ -18,19 +20,42 @@ builds:
       - amd64
       - arm
       - arm64
-    binary: '{{ .ProjectName }}_v{{ .Version }}'
+    binary: "{{ .ProjectName }}_v{{ .Version }}"
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+  - id: lldap-cli
+    main: ./cmd/lldap-cli/main.go
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    binary: lldap-cli
     ldflags:
       - -s -w -X main.Version={{.Version}}
 
 archives:
-  - format: zip
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+  - id: terraform-provider-lldap
+    builds:
+      - terraform-provider-lldap
+    format: zip
+    name_template: "terraform-provider-lldap_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - id: lldap-cli
+    builds:
+      - lldap-cli
+    format: zip
+    name_template: "lldap-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 changelog:
   use: github
 
 checksum:
-  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  name_template: "checksums_{{ .Version }}_SHA256SUMS"
 
 signs:
   - artifacts: checksum

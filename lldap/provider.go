@@ -98,12 +98,13 @@ func Provider() *schema.Provider {
 		}
 		client := LldapClient{
 			Config: Config{
-				Context:  ctx,
-				HttpUrl:  parsedHttpUrl,
-				LdapUrl:  parsedLdapUrl,
-				UserName: d.Get("username").(string),
-				Password: d.Get("password").(string),
-				BaseDn:   d.Get("base_dn").(string),
+				Context:               ctx,
+				HttpUrl:               parsedHttpUrl,
+				LdapUrl:               parsedLdapUrl,
+				UserName:              d.Get("username").(string),
+				Password:              d.Get("password").(string),
+				BaseDn:                d.Get("base_dn").(string),
+				InsecureSkipCertCheck: d.Get("insecure_skip_cert_check").(bool),
 			},
 		}
 		return &client, nil

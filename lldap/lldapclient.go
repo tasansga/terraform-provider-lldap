@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -76,6 +77,20 @@ type LldapMutateOk struct {
 type LldapCustomAttribute struct {
 	Name  string   `json:"name"`
 	Value []string `json:"value"`
+}
+
+// isEntityNotFoundError checks if a diagnostic error indicates that an entity was not found
+// This is used in Read functions to determine if a resource should be marked as deleted
+func isEntityNotFoundError(err diag.Diagnostics) bool {
+	if err == nil {
+		return false
+	}
+	for _, d := range err {
+		if strings.Contains(d.Summary, "Entity not found") {
+			return true
+		}
+	}
+	return false
 }
 
 type LldapCustomAttributeType string
@@ -190,7 +205,11 @@ func getLdapBindConnection(ldapUrl string, baseDn string, username string, passw
 func (lc *LldapClient) IsValidPassword(username string, password string) (bool, diag.Diagnostics) {
 	bind, bindErr := getLdapBindConnection(lc.Config.LdapUrl.String(), lc.Config.BaseDn, username, password)
 	if bind != nil {
-		defer bind.Close()
+		defer func() {
+			if err := bind.Close(); err != nil {
+				log.Println("Error closing ldap bind connection:", err)
+			}
+		}()
 	}
 	if bindErr != nil {
 		if strings.Contains(bindErr[len(bindErr)-1].Summary, "Invalid Credentials") {
@@ -243,7 +262,11 @@ func (lc *LldapClient) query(query LldapClientQuery) ([]byte, diag.Diagnostics) 
 	if respErr != nil {
 		return nil, diag.FromErr(respErr)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing ldap bind connection:", err)
+		}
+	}()
 	bodyBytes, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, diag.FromErr(readErr)
@@ -287,7 +310,11 @@ func (lc *LldapClient) Authenticate() diag.Diagnostics {
 	if respErr != nil {
 		return diag.FromErr(respErr)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing ldap bind connection:", err)
+		}
+	}()
 	bodyBytes, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return diag.FromErr(readErr)

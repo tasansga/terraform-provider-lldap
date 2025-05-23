@@ -11,6 +11,7 @@ terraform {
   }
 }
 
+# Variables for LLDAP connection (matching test script format)
 variable "lldap_http_url" {}
 variable "lldap_ldap_url" {}
 variable "lldap_username" {}
@@ -25,37 +26,50 @@ provider "lldap" {
   base_dn  = var.lldap_base_dn
 }
 
-resource "lldap_group" "group" {
-  display_name = "Test group"
+# Random suffix for unique resource names
+resource "random_string" "suffix" {
+  length  = 8
+  special = false
+  upper   = false
 }
 
-resource "lldap_group_attribute" "test" {
-  count          = 50
-  name           = "test-${count.index}"
-  attribute_type = "STRING"
+# Variables for testing different configurations
+variable "test_attribute_type" {
+  description = "Attribute type for testing"
+  type        = string
+  default     = "STRING"
 }
 
-output "group_attr" {
-  value = lldap_group_attribute.test
+variable "test_is_list" {
+  description = "Whether the attribute is a list"
+  type        = bool
+  default     = false
 }
 
-resource "lldap_group_attribute" "test_change" {
-  name           = "test-change"
-  attribute_type = "STRING"
-  is_list        = true
-  is_visible     = false
+variable "test_is_visible" {
+  description = "Whether the attribute is visible"
+  type        = bool
+  default     = true
 }
 
-output "group_attr_change" {
-  value = lldap_group_attribute.test_change
+# Test group attribute resource
+resource "lldap_group_attribute" "test_attr" {
+  name           = "testgroupattr${random_string.suffix.result}"
+  attribute_type = var.test_attribute_type
+  is_list        = var.test_is_list
+  is_visible     = var.test_is_visible
 }
 
-resource "lldap_group_attribute_assignment" "test" {
-  group_id     = lldap_group.group.id
-  attribute_id = lldap_group_attribute.test_change.id
-  value        = ["test-value: ${lldap_group.group.display_name}"]
+# Data sources for validation
+data "lldap_group_attributes" "group_attrs" {
+  depends_on = [lldap_group_attribute.test_attr]
 }
 
-output "group_attr_assignment" {
-  value = lldap_group_attribute_assignment.test
+# Outputs for testing
+output "test_group_attr" {
+  value = lldap_group_attribute.test_attr
+}
+
+output "group_attrs" {
+  value = data.lldap_group_attributes.group_attrs
 }
