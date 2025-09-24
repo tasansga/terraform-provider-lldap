@@ -9,7 +9,7 @@ before:
 
 builds:
   - id: terraform-provider-lldap
-    main: ./cmd/terraform-provider/lldap/main.go
+    main: ./cmd/terraform-provider-lldap/main.go
     env:
       - CGO_ENABLED=0
     goos:
