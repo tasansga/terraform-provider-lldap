@@ -16,6 +16,35 @@ User, group and membership lifecycle management works and most attributes can be
 
 Check the [docs](./docs/index.md)!
 
+## lldap-cli
+
+`lldap-cli` is a command line tool for interacting with an LLDAP server.
+
+### Setup
+
+Before using `lldap-cli`, you need to set the following environment variables:
+
+- `LLDAP_USER` (optional, defaults to "admin") - The username of the administrative user.
+- `LLDAP_PASSWORD` (required) - Password for the administrative user.
+- `LLDAP_BASE_DN` (required) - LDAP Base Distinguished Name, for example: `dc=example,dc=com`.
+- `LLDAP_HTTP_URL` (required) - HTTP(s) URL of the LLDAP server, e.g. `https://localhost:3000`.
+- `LLDAP_LDAP_URL` (required) - LDAP(s) URL of the LLDAP server, e.g. `ldaps://localhost:636`.
+- `INSECURE_CERT` (optional, default `false`) - Skip TLS certificate verification if set to `true`.
+
+### Basic Usage
+
+```bash
+$ lldap-cli --help
+Usage:
+  lldap-cli [command]
+
+Available Commands:
+  attribute   Attribute operations
+  group       Group operations
+  member      Membership operations
+  user        User operations
+```
+
 
 ## Develop
 
@@ -23,11 +52,11 @@ Just run `make` in the repository root, this will lint, build, test, run `go mod
 and generate docs.
 
 Works for me with:
-- Go 1.23
+- Go 1.25
 - GNU make 4.4
 - Bash 5
-- LLDAP 0.6.0
-- Docker 27.3
+- LLDAP 0.6.2
+- Docker 27.5
 
 The client uses mostly the [LLDAP GraphQL API](https://github.com/lldap/lldap/blob/main/docs/scripting.md) (see also the [schema](https://github.com/lldap/lldap/blob/main/schema.graphql)).
 
