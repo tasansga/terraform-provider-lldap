@@ -25,8 +25,7 @@ docs:
 	rm -Rf docs
 	mv cmd/terraform-provider-lldap/docs .
 
-test: build
-	MAKE_TERMOUT=1 ./scripts/test.sh all
+test: build unittest inttest
 
 unittest: unittest-lldap unittest-cli
 
@@ -39,13 +38,13 @@ unittest-cli: build
 inttest: inttest-lldap inttest-cli inttest-terraform
 
 inttest-lldap: build
-	MAKE_TERMOUT=1 ./scripts/test.sh inttest-lldap
+	./scripts/test.sh inttest-lldap
 
 inttest-cli: build
-	MAKE_TERMOUT=1 ./scripts/test.sh inttest-cli
+	./scripts/test.sh inttest-cli
 
 inttest-terraform: build
-	MAKE_TERMOUT=1 TEST=$(TEST) ./scripts/test.sh inttest
+	./scripts/test.sh inttest $(TEST)
 
 debug:
 	DEBUG_LOCAL=yes go run cmd/terraform-provider-lldap/main.go
