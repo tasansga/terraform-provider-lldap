@@ -54,8 +54,15 @@ archives:
 changelog:
   use: github
 
-checksum:
-  name_template: "checksums_{{ .Version }}_SHA256SUMS"
+checksums:
+  - name_template: "terraform-provider-lldap_{{ .Version }}_SHA256SUMS"
+    files:
+      - "terraform-provider-lldap_{{ .Version }}_*.zip"
+  - name_template: "lldap-cli_{{ .Version }}_SHA256SUMS"
+    files:
+      - "lldap-cli_{{ .Version }}_*.zip"
+  - name_template: "checksums_{{ .Version }}_SHA256SUMS"
+    # This file includes all artifacts as a safety net
 
 signs:
   - artifacts: checksum
