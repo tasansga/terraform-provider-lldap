@@ -103,6 +103,7 @@ EOF
     export LLDAP_PORT_HTTP="$lldap_port_http"
     export LLDAP_PORT_LDAP="$lldap_port_ldap"
     export LLDAP_PASSWORD="$passwd"
+    export LLDAP_BASE_DN="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
 }
 
 function start_server {
@@ -196,8 +197,9 @@ lldap_base_dn="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
 EOF
     export LLDAP_HTTP_URL="http://${LLDAP_HOST}:${LLDAP_PORT_HTTP}"
     export LLDAP_LDAP_URL="ldap://${LLDAP_HOST}:${LLDAP_PORT_LDAP}"
-    export LLDAP_USERNAME="admin"
+    export LLDAP_USER="admin"
     export LLDAP_PASSWORD="$LLDAP_PASSWORD"
+    export LLDAP_BASE_DN="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
     tofu init -reconfigure -upgrade
     if [ -e "${test_path}/test.sh" ]
     then
@@ -262,44 +264,24 @@ EOF
     fi
 }
 
-if [[ -z ${MAKE_TERMOUT+x} ]]
-then
-    if [[ -z ${LLDAP_CONTAINER_ID+x} ]]
-    then
-        echo "Starting LLDAP server... (set DEBUG=true for logs)"
-        start_server
-    else
-        echo "Stopping LLDAP server..."
-        stop_server
-    fi
-else
-    case $COMMAND in
-        unittest)
-            run_unit_test
-            ;;
-        unittest-cli)
-            run_unit_test_cli
-            ;;
-        inttest)
-            run_integration_tests
-            ;;
-        inttest-cli)
-            run_integration_test_cli
-            ;;
-        inttest-lldap)
-            run_integration_test_lldap
-            ;;
-        all)
-            echo "Running all tests..."
-            run_unit_test
-            run_unit_test_cli
-            run_integration_test_lldap
-            run_integration_test_cli
-            run_integration_tests
-            ;;
-        *)
-            echo "Invalid option. Use: unittest, unittest-cli, inttest, inttest-cli, inttest-lldap, or all."
-            exit 1
-            ;;
-    esac
-fi
+case $COMMAND in
+    unittest)
+        run_unit_test
+        ;;
+    unittest-cli)
+        run_unit_test_cli
+        ;;
+    inttest)
+        run_integration_tests
+        ;;
+    inttest-cli)
+        run_integration_test_cli
+        ;;
+    inttest-lldap)
+        run_integration_test_lldap
+        ;;
+    *)
+        echo "Invalid option. Use: unittest, unittest-cli, inttest, inttest-cli, inttest-lldap, or all."
+        exit 1
+        ;;
+esac
