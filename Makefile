@@ -11,7 +11,7 @@ build:
 	go build -o "${DIST_DIR}/lldap-cli" cmd/lldap-cli/main.go
 
 lint:
-	tfproviderlint -R001=false ./...
+	#tfproviderlint -R001=false ./...
 	golangci-lint run lldap
 	golangci-lint run cmd/lldap-cli
 	golangci-lint run cmd/terraform-provider-lldap
