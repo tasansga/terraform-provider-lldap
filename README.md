@@ -12,7 +12,7 @@ You can find it in the [terraform registry](https://registry.terraform.io/provid
 User, group and membership lifecycle management works and most attributes can be defined in their respective resource. Passwords can be set and changed (but not read). Custom attributes are supported as well.
 
 
-## Usage
+## terraform-provider-lldap
 
 Check the [docs](./docs/index.md)!
 
@@ -52,7 +52,7 @@ Just run `make` in the repository root, this will lint, build, test, run `go mod
 and generate docs.
 
 Works for me with:
-- Go 1.25
+- Go 1.26
 - GNU make 4.4
 - Bash 5
 - LLDAP 0.6.2
