@@ -44,7 +44,7 @@ inttest-cli: build
 	./scripts/test.sh inttest-cli
 
 inttest-terraform: build
-	./scripts/test.sh inttest $(TEST)
+	TEST="$(TEST)" ./scripts/test.sh inttest
 
 debug:
 	DEBUG_LOCAL=yes go run cmd/terraform-provider-lldap/main.go
