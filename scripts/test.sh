@@ -179,7 +179,25 @@ function run_integration_test_lldap {
 }
 
 function run_integration_test {
-    local test_path="$1"
+    local input_path="$1"
+    local root_dir="${2:-}"
+    local test_path=""
+    local test_name=""
+
+    # Handle different input formats
+    if [[ "$input_path" == */* ]] && [[ "$input_path" != */tests/* ]]; then
+        # Input is like "env/basic" - extract test name and build full path
+        test_name="${input_path##*/}"
+        local dir_name="${input_path%/*}"
+        if [[ -z "$root_dir" ]]; then
+            root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+        fi
+        test_path="${root_dir}/tests/${dir_name}"
+    else
+        # Input is a full path like "/path/to/tests/env"
+        test_path="$input_path"
+    fi
+
     start_server
     trap stop_server RETURN
     trap stop_server EXIT
@@ -201,11 +219,28 @@ EOF
     export LLDAP_PASSWORD="$LLDAP_PASSWORD"
     export LLDAP_BASE_DN="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
     tofu init -reconfigure -upgrade
-    if [ -e "${test_path}/test.sh" ]
-    then
+
+    if [ -n "$test_name" ] && [ -e "${test_path}/test_${test_name}.sh" ]; then
+        # Run specific test file
+        "${test_path}/test_${test_name}.sh"
+    elif [ -n "$test_name" ]; then
+        echo "Test file test_${test_name}.sh not found in $test_path"
+        exit 1
+    elif [ -e "${test_path}/test.sh" ]; then
+        # Run main test.sh if no specific test requested
         "${test_path}/test.sh"
     else
-        tofu test
+        # Run all test_*.sh files in the directory
+        local test_files=($(ls "${test_path}"/test_*.sh 2>/dev/null || true))
+        if [ ${#test_files[@]} -gt 0 ]; then
+            for test_file in "${test_files[@]}"; do
+                echo "Running $(basename "$test_file")..."
+                "$test_file"
+            done
+        else
+            # Fallback to tofu test
+            tofu test
+        fi
     fi
     unset "TF_IN_AUTOMATION"
 }
@@ -225,6 +260,7 @@ function run_integration_tests {
     trap on_integration_test_exit EXIT
 
     cd "${tf_provider_lldap_root_dir}"
+    export LLDAP_CLI="${tf_provider_lldap_root_dir}/dist/lldap-cli"
     # macos: arm64, linux: aarch64
     if [[ $(uname -m) == "aarch64" ]] || [[ $(uname -m) == "arm64" ]]
     then
@@ -256,11 +292,18 @@ EOF
     then
         for f in $tf_provider_lldap_root_dir/tests/*
         do
-            run_integration_test "$f"
+            run_integration_test "$f" "$tf_provider_lldap_root_dir"
         done
     else
-        f="${tf_provider_lldap_root_dir}/tests/${TEST}"
-        run_integration_test "$f"
+        # Handle both "env" and "env/basic" formats
+        if [[ "$TEST" == */* ]]; then
+            # TEST is like "env/basic" - pass the full path
+            run_integration_test "$TEST" "$tf_provider_lldap_root_dir"
+        else
+            # TEST is like "env" - pass just the directory
+            f="${tf_provider_lldap_root_dir}/tests/${TEST}"
+            run_integration_test "$f" "$tf_provider_lldap_root_dir"
+        fi
     fi
 }
 

@@ -125,8 +125,8 @@ func resourceUserMembershipsRead(ctx context.Context, d *schema.ResourceData, m 
 		}
 		return getUserErr
 	}
-	setRdErr := resourceUserMembershipsSetResourceData(d, user)
-	if setRdErr != nil {
+
+	if setRdErr := resourceUserMembershipsSetResourceData(d, user); setRdErr != nil {
 		return setRdErr
 	}
 	return nil

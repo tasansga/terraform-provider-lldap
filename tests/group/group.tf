@@ -65,7 +65,7 @@ resource "lldap_group_attribute" "test_attr" {
 resource "lldap_group" "group_with_attrs" {
   count        = var.create_group_with_attrs ? 1 : 0
   display_name = "Group with Attributes - ${random_string.suffix.result}"
-  
+
   depends_on = [lldap_group_attribute.test_attr]
 }
 

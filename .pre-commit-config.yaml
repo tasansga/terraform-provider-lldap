@@ -1,0 +1,10 @@
+fail_fast: true
+repos:
+  - repo: local
+    hooks:
+      - id: make
+        name: Run make
+        entry: make
+        language: system
+        pass_filenames: false
+        always_run: true

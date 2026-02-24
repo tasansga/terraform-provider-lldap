@@ -109,7 +109,7 @@ func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceD
 	if getGroupErr != nil {
 		return getGroupErr
 	}
-	groupAttributes := make([]string, len(group.Attributes))
+	groupAttributes := make([]string, 0, len(group.Attributes))
 	var value []string
 	for _, attr := range group.Attributes {
 		groupAttributes = append(groupAttributes, attr.Name)
@@ -118,7 +118,9 @@ func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceD
 		}
 	}
 	if !slices.Contains(groupAttributes, attributeId) {
-		return diag.Errorf("Group is missing attribute!")
+		// Attribute missing remotely -> treat as drift and clear state.
+		d.SetId("")
+		return nil
 	}
 	for k, v := range map[string]any{
 		"group_id":     groupId,

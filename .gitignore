@@ -6,5 +6,6 @@
 *.tfvars
 terraform.tfstate
 terraform.tfstate.backup
-errored_test.tfstate
+*.tfstate*
 dist/
+*.tfplan

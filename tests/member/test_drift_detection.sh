@@ -2,29 +2,10 @@
 
 set -exo pipefail
 
-echo "=== Member CRUD Lifecycle Test ==="
 
-echo "=== Test Create ==="
+source "$(dirname "${BASH_SOURCE[0]}")/../test_helpers/cli_checks.sh"
+
 tofu apply -auto-approve
-
-echo "=== Test Read (via data sources) ==="
-tofu refresh
-
-echo "=== Test Update (member count variations) ==="
-for count in 1 5; do
-  echo "=== Testing with $count members ==="
-  tofu apply -auto-approve -var member_count=$count
-  tofu apply -auto-approve -destroy -var member_count=$count
-done
-
-echo "=== Test Delete ==="
-tofu apply -auto-approve
-tofu apply -auto-approve -destroy
-
-echo "=== Test Out-of-Band Member Removal ==="
-tofu apply -auto-approve
-
-echo "Removing member out of band using GraphQL API..."
 auth_data="$(jo -- username="admin" password="$LLDAP_PASSWORD")"
 auth_response="$(curl \
     --silent \
@@ -47,16 +28,6 @@ curl \
     --header 'Content-Type: application/json' \
     --data "$data"
 
-echo "=== Test Drift Detection and Correction ==="
-echo "Terraform should detect and recreate the removed member..."
 tofu apply -auto-approve
-
-echo "=== Clean up ==="
+cli_assert_state_change
 tofu apply -auto-approve -destroy
-
-echo "=== Test Member Lifecycle with Different Configurations ==="
-# Test with zero members
-tofu apply -auto-approve -var member_count=0
-tofu apply -auto-approve -destroy -var member_count=0
-
-echo "=== All member CRUD tests completed successfully! ==="

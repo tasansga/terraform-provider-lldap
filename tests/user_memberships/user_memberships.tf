@@ -58,9 +58,9 @@ resource "lldap_group" "test" {
 }
 
 resource "lldap_user_memberships" "user" {
-  user_id    = lldap_user.user.id
-  group_ids  = toset([ for group in slice(lldap_group.test,0, var.num_groups): group.id ])
-  depends_on = [lldap_user.user]
+  user_id         = lldap_user.user.id
+  group_ids       = toset([ for group in slice(lldap_group.test,0, var.num_groups): group.id ])
+  depends_on      = [lldap_user.user]
 }
 
 # Data sources for verification

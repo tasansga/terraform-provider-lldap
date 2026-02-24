@@ -1,4 +1,4 @@
-name: Release
+name: Release terraform provider
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
 jobs:
   release:
     name: Release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
@@ -17,17 +19,75 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
+      - name: Tidy modules
+        run: go mod tidy
       - name: Import GPG key
-        id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - name: Build and package artifacts
+        run: |
+          set -euo pipefail
+          RAW_TAG=${GITHUB_REF#refs/tags/}
+          TAG_VERSION=${RAW_TAG#v}
+          VERSION=$TAG_VERSION
+          RELEASE_DIR=release/dist
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR"
+          COMBOS=(
+            linux/amd64
+            linux/arm
+            linux/arm64
+            windows/amd64
+            windows/arm64
+            darwin/amd64
+            darwin/arm64
+          )
+          for combo in "${COMBOS[@]}"; do
+            os=${combo%/*}
+            arch=${combo#*/}
+            bin_ext=""
+            if [[ "$os" == "windows" ]]; then
+              bin_ext=".exe"
+            fi
+            if [[ "$arch" == "arm" ]]; then
+              export GOARM=7
+            else
+              unset GOARM
+            fi
+            bin_name="terraform-provider-lldap_v${VERSION}${bin_ext}"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -o "$RELEASE_DIR/${bin_name}" ./cmd/terraform-provider-lldap
+            zip -j "$RELEASE_DIR/terraform-provider-lldap_${VERSION}_${os}_${arch}.zip" "$RELEASE_DIR/${bin_name}"
+            rm "$RELEASE_DIR/${bin_name}"
+          done
+      - name: Create checksum files
+        run: |
+          set -euo pipefail
+          RAW_TAG=${GITHUB_REF#refs/tags/}
+          TAG_VERSION=${RAW_TAG#v}
+          VERSION=$TAG_VERSION
+          cd release/dist
+          sha256sum terraform-provider-lldap_${VERSION}_*.zip > terraform-provider-lldap_${VERSION}_SHA256SUMS
+          sha256sum terraform-provider-lldap_${VERSION}_*.zip > checksums_${VERSION}_SHA256SUMS
+      - name: Sign checksum files
+        run: |
+          set -euo pipefail
+          RAW_TAG=${GITHUB_REF#refs/tags/}
+          TAG_VERSION=${RAW_TAG#v}
+          VERSION=$TAG_VERSION
+          cd release/dist
+          FILES=(terraform-provider-lldap_${VERSION}_SHA256SUMS checksums_${VERSION}_SHA256SUMS)
+          for file in "${FILES[@]}"; do
+            gpg --batch --yes --detach-sign --output "${file}.sig" "${file}"
+          done
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          files: release/dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          version: '~> v2'
-          args: release
