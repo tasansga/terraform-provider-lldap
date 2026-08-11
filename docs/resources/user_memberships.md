@@ -45,6 +45,8 @@ resource "lldap_user_memberships" "user" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # An user's memberships can be imported by specifying the user ID (username).
 terraform import lldap_user_memberships.example admin

@@ -52,7 +52,7 @@ Just run `make` in the repository root, this will lint, build, test, run `go mod
 and generate docs.
 
 Works for me with:
-- Go 1.26
+- Go 1.26.5
 - GNU make 4.4
 - Bash 5
 - LLDAP 0.6.2
