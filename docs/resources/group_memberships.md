@@ -45,6 +45,8 @@ resource "lldap_group_memberships" "group" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # A group's memberships can be imported by specifying the group ID.
 terraform import lldap_group_memberships.example 3
