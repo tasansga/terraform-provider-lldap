@@ -25,10 +25,11 @@ func resourceUserMemberships() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
 				_ = d.Set("id", d.Id())
-				return schema.ImportStatePassthroughContext(ctx, d, m)
+				_ = d.Set("user_id", d.Id())
+				return []*schema.ResourceData{d}, nil
 			},
 		},
-		Description: "Exclusively manages all LLDAP memberhips for this specific user",
+		Description: "Exclusively manages all LLDAP memberships for this specific user",
 		Schema: map[string]*schema.Schema{
 			"group_ids": {
 				Type:        schema.TypeSet,
@@ -116,6 +117,10 @@ func resourceUserMembershipsCreate(ctx context.Context, d *schema.ResourceData, 
 func resourceUserMembershipsRead(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	lc := m.(*LldapClient)
 	userId := d.Get("user_id").(string)
+	if userId == "" && d.Id() != "" {
+		userId = d.Id()
+		_ = d.Set("user_id", userId)
+	}
 	user, getUserErr := lc.GetUser(userId)
 	if getUserErr != nil {
 		// If the user was not found, mark the resource as deleted so Terraform will recreate it

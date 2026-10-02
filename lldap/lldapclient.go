@@ -676,7 +676,7 @@ func (lc *LldapClient) RemoveUserFromGroup(groupId int, userId string) diag.Diag
 		return diag.Errorf("GraphQL query returned error: %s", string(response))
 	}
 	if !removeUserResponse.Data.RemoveUserFromGroup.OK {
-		return diag.Errorf("Failed to add user to group: %s", string(response))
+		return diag.Errorf("Failed to remove user from group: %s", string(response))
 	}
 	return nil
 }

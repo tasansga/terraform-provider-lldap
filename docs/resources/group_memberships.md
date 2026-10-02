@@ -3,12 +3,12 @@
 page_title: "lldap_group_memberships Resource - terraform-provider-lldap"
 subcategory: ""
 description: |-
-  Exclusively manages all LLDAP memberhips for this specific group
+  Exclusively manages all LLDAP memberships for this specific group
 ---
 
 # lldap_group_memberships (Resource)
 
-Exclusively manages all LLDAP memberhips for this specific group
+Exclusively manages all LLDAP memberships for this specific group
 
 ## Example Usage
 

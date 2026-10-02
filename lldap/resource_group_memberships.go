@@ -24,11 +24,15 @@ func resourceGroupMemberships() *schema.Resource {
 		DeleteContext: resourceGroupMembershipsDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, m any) ([]*schema.ResourceData, error) {
+				if _, err := strconv.Atoi(d.Id()); err != nil {
+					return nil, fmt.Errorf("not a valid group_id: %s (must be an integer: %w)", d.Id(), err)
+				}
 				_ = d.Set("id", d.Id())
-				return schema.ImportStatePassthroughContext(ctx, d, m)
+				_ = d.Set("group_id", d.Id())
+				return []*schema.ResourceData{d}, nil
 			},
 		},
-		Description: "Exclusively manages all LLDAP memberhips for this specific group",
+		Description: "Exclusively manages all LLDAP memberships for this specific group",
 		Schema: map[string]*schema.Schema{
 			"user_ids": {
 				Type:        schema.TypeSet,
@@ -94,8 +98,11 @@ func resourceGroupMembershipsCreate(ctx context.Context, d *schema.ResourceData,
 	if getUserIdsErr != nil {
 		return getUserIdsErr
 	}
+	groupIdInt, err := strconv.Atoi(groupId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	lc := m.(*LldapClient)
-	groupIdInt, _ := strconv.Atoi(groupId)
 	for _, userId := range userIds {
 		addErr := lc.AddUserToGroup(groupIdInt, userId)
 		if addErr != nil {
@@ -108,10 +115,21 @@ func resourceGroupMembershipsCreate(ctx context.Context, d *schema.ResourceData,
 
 func resourceGroupMembershipsRead(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	groupId := d.Get("group_id").(string)
-	groupIdInt, _ := strconv.Atoi(groupId)
+	if groupId == "" && d.Id() != "" {
+		groupId = d.Id()
+		_ = d.Set("group_id", groupId)
+	}
+	groupIdInt, err := strconv.Atoi(groupId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	lc := m.(*LldapClient)
 	group, getGroupErr := lc.GetGroup(groupIdInt)
 	if getGroupErr != nil {
+		if isEntityNotFoundError(getGroupErr) {
+			d.SetId("")
+			return nil
+		}
 		return getGroupErr
 	}
 	setRdErr := resourceGroupMembershipsSetResourceData(d, group)
@@ -123,7 +141,10 @@ func resourceGroupMembershipsRead(ctx context.Context, d *schema.ResourceData, m
 
 func resourceGroupMembershipsUpdate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	groupId := d.Get("group_id").(string)
-	groupIdInt, _ := strconv.Atoi(groupId)
+	groupIdInt, err := strconv.Atoi(groupId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	groupWantsUserIds, getGroupIdsErr := resourceGroupMembershipsGetUserIds(d)
 	if getGroupIdsErr != nil {
 		return getGroupIdsErr
@@ -155,7 +176,10 @@ func resourceGroupMembershipsUpdate(ctx context.Context, d *schema.ResourceData,
 
 func resourceGroupMembershipsDelete(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	groupId := d.Get("group_id").(string)
-	groupIdInt, _ := strconv.Atoi(groupId)
+	groupIdInt, err := strconv.Atoi(groupId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	userIds, getUserIdsErr := resourceGroupMembershipsGetUserIds(d)
 	if getUserIdsErr != nil {
 		return getUserIdsErr

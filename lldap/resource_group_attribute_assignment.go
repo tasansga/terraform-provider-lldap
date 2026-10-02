@@ -8,7 +8,6 @@ package lldap
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
@@ -78,8 +77,6 @@ func resourceGroupAttributeAssignmentCreate(ctx context.Context, d *schema.Resou
 	for i, vRaw := range valueRawList {
 		value[i] = vRaw.(string)
 	}
-	something, _ := json.Marshal(value)
-	tflog.Error(ctx, fmt.Sprintf("Got something: %s", string(something)))
 	id := fmt.Sprintf("%d%s%s", groupId, resourceGroupAttributeAssignmentIdSeparator, attributeId)
 	tflog.Debug(ctx, fmt.Sprintf("Will create group attribute assignment with id: %s", id))
 	d.SetId(id)
@@ -107,6 +104,10 @@ func resourceGroupAttributeAssignmentRead(_ context.Context, d *schema.ResourceD
 	lc := m.(*LldapClient)
 	group, getGroupErr := lc.GetGroup(groupId)
 	if getGroupErr != nil {
+		if isEntityNotFoundError(getGroupErr) {
+			d.SetId("")
+			return nil
+		}
 		return getGroupErr
 	}
 	groupAttributes := make([]string, 0, len(group.Attributes))
