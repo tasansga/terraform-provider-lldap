@@ -35,7 +35,7 @@ func resourceMember() *schema.Resource {
 				return schema.ImportStatePassthroughContext(ctx, d, m)
 			},
 		},
-		Description: "Manages a LLDAP memberhip, i.e. a group-user relationship",
+		Description: "Manages a LLDAP membership, i.e. a group-user relationship",
 		Schema: map[string]*schema.Schema{
 			"group_display_name": {
 				Type:        schema.TypeString,
@@ -110,7 +110,7 @@ func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 		}
 		return getGroupErr
 	}
-	groupMembers := make([]string, len(group.Users))
+	groupMembers := make([]string, 0, len(group.Users))
 	for _, user := range group.Users {
 		groupMembers = append(groupMembers, user.Id)
 	}
