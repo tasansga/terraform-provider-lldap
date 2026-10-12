@@ -102,6 +102,50 @@ func TestResourceMemberRead_MembershipPresent(t *testing.T) {
 	assert.Equal(t, "1:alice", d.Id())
 }
 
+func TestResourceMemberRead_ImportSetsAttributes(t *testing.T) {
+	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/simple/login" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"token":        "mock-token",
+				"refreshToken": "mock-refresh",
+			})
+			return
+		}
+
+		if r.URL.Path == "/api/graphql" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"group": map[string]any{
+						"id":          1,
+						"displayName": "developers",
+						"users": []map[string]any{
+							{"id": "alice"},
+						},
+					},
+				},
+			})
+			return
+		}
+
+		http.Error(w, fmt.Sprintf("unhandled request: %s %s", r.Method, r.URL.Path), http.StatusNotFound)
+	})
+	defer server.Close()
+
+	// An import gives only the id, so the read must set the attributes.
+	r := resourceMember()
+	d := schema.TestResourceDataRaw(t, r.Schema, map[string]any{})
+	d.SetId("1:alice")
+
+	readDiags := resourceMemberRead(context.Background(), d, client)
+	require.False(t, readDiags.HasError(), "expected no error, got %v", readDiags)
+	assert.Equal(t, "1:alice", d.Id())
+	assert.Equal(t, 1, d.Get("group_id"))
+	assert.Equal(t, "alice", d.Get("user_id"))
+	assert.Equal(t, "developers", d.Get("group_display_name"))
+}
+
 func TestResourceMemberRead_MembershipAbsent(t *testing.T) {
 	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/simple/login" {
