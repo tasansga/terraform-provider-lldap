@@ -116,6 +116,18 @@ func resourceMemberRead(_ context.Context, d *schema.ResourceData, m any) diag.D
 	}
 	if !slices.Contains(groupMembers, userId) {
 		d.SetId("")
+		return nil
+	}
+	// Set from the id, so that an imported member has the values that the
+	// config compares with and that the delete uses.
+	if setErr := d.Set("group_id", groupId); setErr != nil {
+		return diag.FromErr(setErr)
+	}
+	if setErr := d.Set("user_id", userId); setErr != nil {
+		return diag.FromErr(setErr)
+	}
+	if setErr := d.Set("group_display_name", group.DisplayName); setErr != nil {
+		return diag.FromErr(setErr)
 	}
 	return nil
 }
