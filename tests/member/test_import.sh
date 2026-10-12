@@ -4,6 +4,7 @@ set -exo pipefail
 
 
 tofu apply -auto-approve
+tofu apply -refresh-only -auto-approve
 
 # Import the member again, and make sure that the read sets all the attributes,
 # so the next plan has no changes.
