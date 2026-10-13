@@ -9,28 +9,85 @@ set -eo pipefail
 readonly DATABASE="postgres"
 readonly COMMAND="$1"
 
+function get_container_host_port {
+    local cnt_id="$1"
+    local container_port="$2"
+    local port_line
+    for _ in {1..10}; do
+        port_line=$(docker port "$cnt_id" "$container_port" 2>/dev/null || true)
+        if [[ -n "$port_line" ]]; then
+            local first_line="${port_line%%$'\n'*}"
+            local host_port="${first_line##*:}"
+            echo "$host_port"
+            return 0
+        fi
+        local status
+        status=$(docker inspect -f '{{.State.Status}}' "$cnt_id" 2>/dev/null || true)
+        if [[ "$status" == "exited" || "$status" == "dead" ]]; then
+            echo "Error: Container ${cnt_id} is in status '${status}' while resolving ${container_port}" >&2
+            return 1
+        fi
+        sleep 0.5
+    done
+    echo "Error: Failed to resolve host port for container ${cnt_id} (${container_port})" >&2
+    return 1
+}
+
 function wait_for_service {
     local host="$1"
     local port="$2"
+    local cnt_id="${3:-}"
+    local timeout="${4:-30}"
+
+    if [[ -z "$port" ]]; then
+        echo "Error: Service port is empty for host ${host} (container: ${cnt_id:-unknown})" >&2
+        if [[ -n "$cnt_id" ]]; then
+            docker logs "$cnt_id" 2>&1 || true
+        fi
+        return 1
+    fi
+
     echo "waiting for ${host}:${port}..."
-    while true
-    do
+    local elapsed=0
+    while true; do
+        if nc -z "$host" "$port" 2>/dev/null; then
+            break
+        fi
+        if [[ -n "$cnt_id" && $(docker inspect -f '{{.State.Running}}' "$cnt_id" 2>/dev/null) != "true" ]]; then
+            echo "Error: Container ${cnt_id} exited while waiting for ${host}:${port}" >&2
+            docker logs "$cnt_id" 2>&1 || true
+            return 1
+        fi
+        if (( elapsed >= timeout )); then
+            echo "Error: Timed out waiting for ${host}:${port} after ${timeout}s" >&2
+            if [[ -n "$cnt_id" ]]; then
+                docker logs "$cnt_id" 2>&1 || true
+            fi
+            return 1
+        fi
         sleep 1
-        nc -z "$host" "$port" && break
+        elapsed=$((elapsed + 1))
     done
 }
 
 function start_postgres_server {
-    local passwd=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    local passwd
+    passwd=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    local postgres_cnt_id
+    local -a rm_args=(--rm)
+    if [[ "$DEBUG" == "true" ]]; then
+        rm_args=()
+    fi
     postgres_cnt_id=$(docker run \
         --detach \
-        --rm \
+        "${rm_args[@]}" \
         -p 5432 \
         --env "POSTGRES_DB=lldap" \
         --env "POSTGRES_USER=postgres" \
         --env "POSTGRES_PASSWORD=${passwd}" \
         postgres:latest)
-    local postgres_port=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "5432/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' "$postgres_cnt_id")
+    local postgres_port
+    postgres_port=$(get_container_host_port "$postgres_cnt_id" "5432/tcp") || return 1
     local postgres_cnt_ip="127.0.0.1"
 
     if [[ "$DEBUG" == "true" ]]
@@ -38,7 +95,27 @@ function start_postgres_server {
         docker logs -f "$postgres_cnt_id" &
     fi
 
-    wait_for_service "$postgres_cnt_ip" "$postgres_port"
+    echo "waiting for postgres to accept connections..."
+    local elapsed=0
+    while true; do
+        if docker exec "$postgres_cnt_id" pg_isready -h 127.0.0.1 -p 5432 -U postgres -d lldap 2>/dev/null; then
+            break
+        fi
+        if [[ $(docker inspect -f '{{.State.Running}}' "$postgres_cnt_id" 2>/dev/null) != "true" ]]; then
+            echo "Error: Postgres container ${postgres_cnt_id} exited prematurely" >&2
+            docker logs "$postgres_cnt_id" 2>&1 || true
+            return 1
+        fi
+        if (( elapsed >= 30 )); then
+            echo "Error: Timed out waiting for postgres after 30s" >&2
+            docker logs "$postgres_cnt_id" 2>&1 || true
+            return 1
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    wait_for_service "$postgres_cnt_ip" "$postgres_port" "$postgres_cnt_id"
 
     cat <<EOF
 export POSTGRES_CONTAINER_ID="$postgres_cnt_id"
@@ -53,14 +130,20 @@ EOF
 }
 
 function start_lldap_server {
-    local passwd=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
+    local passwd
+    passwd=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 18; echo)
     local lldap_cnt_id
+    local database_url
+    local -a rm_args=(--rm)
+    if [[ "$DEBUG" == "true" ]]; then
+        rm_args=()
+    fi
     if [[ "$DATABASE" == "postgres" ]]
     then
         database_url="postgres://postgres:${POSTGRES_PASSWORD}@host.docker.internal:${POSTGRES_PORT}/lldap"
         lldap_cnt_id=$(docker run \
             --detach \
-            --rm \
+            "${rm_args[@]}" \
             -p 17170 \
             -p 3890 \
             --add-host=host.docker.internal:host-gateway \
@@ -72,7 +155,7 @@ function start_lldap_server {
     else
         lldap_cnt_id=$(docker run \
             --detach \
-            --rm \
+            "${rm_args[@]}" \
             -p 17170 \
             -p 3890 \
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
@@ -80,16 +163,20 @@ function start_lldap_server {
             --env "LLDAP_JWT_SECRET=$(uuidgen)" \
             lldap/lldap:latest)
     fi
-    local lldap_port_http=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "17170/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' "$lldap_cnt_id")
-    local lldap_port_ldap=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "3890/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' "$lldap_cnt_id")
-    local lldap_cnt_ip="127.0.0.1"
 
     if [[ "$DEBUG" == "true" ]]
     then
         docker logs -f "$lldap_cnt_id" &
     fi
 
-    wait_for_service "$lldap_cnt_ip" "$lldap_port_http"
+    local lldap_port_http
+    lldap_port_http=$(get_container_host_port "$lldap_cnt_id" "17170/tcp") || return 1
+    local lldap_port_ldap
+    lldap_port_ldap=$(get_container_host_port "$lldap_cnt_id" "3890/tcp") || return 1
+    local lldap_cnt_ip="127.0.0.1"
+
+    wait_for_service "$lldap_cnt_ip" "$lldap_port_http" "$lldap_cnt_id"
+    wait_for_service "$lldap_cnt_ip" "$lldap_port_ldap" "$lldap_cnt_id"
 
     cat <<EOF
 export LLDAP_CONTAINER_ID="$lldap_cnt_id"
@@ -115,27 +202,39 @@ function start_server {
 }
 
 function stop_postgres_server {
-    docker stop "$POSTGRES_CONTAINER_ID" || true
+    if [[ -n "${POSTGRES_CONTAINER_ID:-}" ]]; then
+        docker stop "$POSTGRES_CONTAINER_ID" || true
+    fi
     cat <<EOF
 unset POSTGRES_CONTAINER_ID
 unset POSTGRES_HOST
+unset POSTGRES_PORT
 unset POSTGRES_PASSWORD
 EOF
     unset POSTGRES_CONTAINER_ID
     unset POSTGRES_HOST
+    unset POSTGRES_PORT
     unset POSTGRES_PASSWORD
 }
 
 function stop_lldap_server {
-    docker stop "$LLDAP_CONTAINER_ID" || true
+    if [[ -n "${LLDAP_CONTAINER_ID:-}" ]]; then
+        docker stop "$LLDAP_CONTAINER_ID" || true
+    fi
     cat <<EOF
 unset LLDAP_CONTAINER_ID
 unset LLDAP_HOST
+unset LLDAP_PORT_HTTP
+unset LLDAP_PORT_LDAP
 unset LLDAP_PASSWORD
+unset LLDAP_BASE_DN
 EOF
     unset LLDAP_CONTAINER_ID
     unset LLDAP_HOST
+    unset LLDAP_PORT_HTTP
+    unset LLDAP_PORT_LDAP
     unset LLDAP_PASSWORD
+    unset LLDAP_BASE_DN
 }
 
 function stop_server {
@@ -158,9 +257,9 @@ function run_unit_test {
 
 function run_integration_test_cli {
     echo "Running CLI integration tests..."
-    start_server
     trap stop_server RETURN
     trap stop_server EXIT
+    start_server
 
     LLDAP_BASE_DN="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
         LLDAP_HTTP_URL="http://${LLDAP_HOST}:${LLDAP_PORT_HTTP}" \
@@ -171,9 +270,9 @@ function run_integration_test_cli {
 
 function run_integration_test_lldap {
     echo "Running lldap package integration tests..."
-    start_server
     trap stop_server RETURN
     trap stop_server EXIT
+    start_server
 
     go test -tags=integration -v ./lldap
 }
@@ -198,9 +297,9 @@ function run_integration_test {
         test_path="$input_path"
     fi
 
-    start_server
     trap stop_server RETURN
     trap stop_server EXIT
+    start_server
 
     echo "Running test: ${test_path}"
     export TF_IN_AUTOMATION="yeah"
@@ -231,8 +330,8 @@ EOF
         "${test_path}/test.sh"
     else
         # Run all test_*.sh files in the directory
-        local test_files=($(ls "${test_path}"/test_*.sh 2>/dev/null || true))
-        if [ ${#test_files[@]} -gt 0 ]; then
+        local -a test_files=("${test_path}"/test_*.sh)
+        if [[ -e "${test_files[0]}" ]]; then
             for test_file in "${test_files[@]}"; do
                 echo "Running $(basename "$test_file")..."
                 "$test_file"
@@ -246,8 +345,11 @@ EOF
 }
 
 function run_integration_tests {
-    local scripts_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-    local tf_provider_lldap_root_dir=$(realpath "${scripts_dir}/..")
+    local scripts_dir
+    scripts_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+    local tf_provider_lldap_root_dir
+    tf_provider_lldap_root_dir=$(realpath "${scripts_dir}/..")
+    local temp_test_dir
     temp_test_dir=$(mktemp -d)
 
     function on_integration_test_exit {
@@ -290,7 +392,7 @@ EOF
 
     if [ -z "$TEST" ]
     then
-        for f in $tf_provider_lldap_root_dir/tests/*
+        for f in "$tf_provider_lldap_root_dir"/tests/*
         do
             run_integration_test "$f" "$tf_provider_lldap_root_dir"
         done
@@ -301,7 +403,7 @@ EOF
             run_integration_test "$TEST" "$tf_provider_lldap_root_dir"
         else
             # TEST is like "env" - pass just the directory
-            f="${tf_provider_lldap_root_dir}/tests/${TEST}"
+            local f="${tf_provider_lldap_root_dir}/tests/${TEST}"
             run_integration_test "$f" "$tf_provider_lldap_root_dir"
         fi
     fi
