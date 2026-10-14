@@ -77,6 +77,9 @@ func resourceGroupAttribute() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "The unique attribute name",
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return strings.EqualFold(old, new)
+				},
 			},
 		},
 	}
@@ -128,6 +131,9 @@ func resourceGroupAttributeCreate(_ context.Context, d *schema.ResourceData, m a
 	if getSchemaErr != nil {
 		return getSchemaErr
 	}
+	if createdSchema == nil {
+		return diag.Errorf("attribute %q was created but could not be retrieved from LLDAP schema", schema.Name)
+	}
 	setRdErr := resourceGroupAttributeSetResourceData(d, createdSchema)
 	if setRdErr != nil {
 		return setRdErr
@@ -140,6 +146,10 @@ func resourceGroupAttributeRead(_ context.Context, d *schema.ResourceData, m any
 	schema, getSchemaErr := lc.GetGroupAttributeSchema(d.Id())
 	if getSchemaErr != nil {
 		return getSchemaErr
+	}
+	if schema == nil {
+		d.SetId("")
+		return nil
 	}
 	setRdErr := resourceGroupAttributeSetResourceData(d, schema)
 	if setRdErr != nil {

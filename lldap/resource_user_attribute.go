@@ -85,6 +85,9 @@ func resourceUserAttribute() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "The unique attribute name",
+				DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+					return strings.EqualFold(old, new)
+				},
 			},
 		},
 	}
@@ -146,6 +149,9 @@ func resourceUserAttributeCreate(_ context.Context, d *schema.ResourceData, m an
 	if getSchemaErr != nil {
 		return getSchemaErr
 	}
+	if createdSchema == nil {
+		return diag.Errorf("attribute %q was created but could not be retrieved from LLDAP schema", schema.Name)
+	}
 	setRdErr := resourceUserAttributeSetResourceData(d, createdSchema)
 	if setRdErr != nil {
 		return setRdErr
@@ -158,6 +164,10 @@ func resourceUserAttributeRead(_ context.Context, d *schema.ResourceData, m any)
 	schema, getSchemaErr := lc.GetUserAttributeSchema(d.Id())
 	if getSchemaErr != nil {
 		return getSchemaErr
+	}
+	if schema == nil {
+		d.SetId("")
+		return nil
 	}
 	setRdErr := resourceUserAttributeSetResourceData(d, schema)
 	if setRdErr != nil {
