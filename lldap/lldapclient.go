@@ -338,7 +338,7 @@ func (lc *LldapClient) GetGroupAttributeSchema(name string) (*LldapGroupAttribut
 		return nil, getAttrErr
 	}
 	for _, attr := range attributes {
-		if attr.Name == name {
+		if strings.EqualFold(attr.Name, name) {
 			result := attr
 			return &result, nil
 		}
@@ -456,7 +456,7 @@ func (lc *LldapClient) GetUserAttributeSchema(name string) (*LldapUserAttributeS
 		return nil, getAttrErr
 	}
 	for _, attr := range attributes {
-		if attr.Name == name {
+		if strings.EqualFold(attr.Name, name) {
 			result := attr
 			return &result, nil
 		}

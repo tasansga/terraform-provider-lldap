@@ -76,3 +76,90 @@ func TestRemoveUserFromGroup_ErrorResponse(t *testing.T) {
 	require.True(t, diags.HasError(), "expected error when removeUserFromGroup returns ok: false")
 	assert.Contains(t, diags[0].Summary, "Failed to remove user from group")
 }
+
+func TestGetUserAttributeSchema_CaseInsensitive(t *testing.T) {
+	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/graphql" {
+			var query struct {
+				OperationName string `json:"operationName"`
+			}
+			err := json.NewDecoder(r.Body).Decode(&query)
+			require.NoError(t, err)
+
+			if query.OperationName == "GetUserAttributesSchema" {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"data": map[string]any{
+						"schema": map[string]any{
+							"userSchema": map[string]any{
+								"attributes": []map[string]any{
+									{
+										"name":          "sshpublickey",
+										"attributeType": "STRING",
+										"isList":        true,
+										"isVisible":     true,
+										"isEditable":    false,
+										"isHardcoded":   false,
+										"isReadonly":    false,
+									},
+								},
+							},
+						},
+					},
+				})
+				return
+			}
+		}
+
+		http.Error(w, "not found", http.StatusNotFound)
+	})
+	defer server.Close()
+
+	schema, diags := client.GetUserAttributeSchema("sshPublicKey")
+	require.False(t, diags.HasError())
+	require.NotNil(t, schema, "expected case-insensitive match for sshPublicKey")
+	assert.Equal(t, "sshpublickey", schema.Name)
+}
+
+func TestGetGroupAttributeSchema_CaseInsensitive(t *testing.T) {
+	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/graphql" {
+			var query struct {
+				OperationName string `json:"operationName"`
+			}
+			err := json.NewDecoder(r.Body).Decode(&query)
+			require.NoError(t, err)
+
+			if query.OperationName == "GetGroupAttributesSchema" {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"data": map[string]any{
+						"schema": map[string]any{
+							"groupSchema": map[string]any{
+								"attributes": []map[string]any{
+									{
+										"name":          "customgroupattr",
+										"attributeType": "STRING",
+										"isList":        false,
+										"isVisible":     true,
+										"isHardcoded":   false,
+										"isReadonly":    false,
+									},
+								},
+							},
+						},
+					},
+				})
+				return
+			}
+		}
+
+		http.Error(w, "not found", http.StatusNotFound)
+	})
+	defer server.Close()
+
+	schema, diags := client.GetGroupAttributeSchema("CustomGroupAttr")
+	require.False(t, diags.HasError())
+	require.NotNil(t, schema, "expected case-insensitive match for CustomGroupAttr")
+	assert.Equal(t, "customgroupattr", schema.Name)
+}
