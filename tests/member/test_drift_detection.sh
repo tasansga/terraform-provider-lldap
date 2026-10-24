@@ -6,7 +6,7 @@ set -exo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../test_helpers/cli_checks.sh"
 
 tofu apply -auto-approve
-auth_data="$(jo -- username="admin" password="$LLDAP_PASSWORD")"
+auth_data="$(jq -n --arg username "admin" --arg password "$LLDAP_PASSWORD" '{username: $username, password: $password}')"
 auth_response="$(curl \
     --silent \
     --fail \
@@ -17,7 +17,7 @@ auth_response="$(curl \
 token="$(echo "$auth_response" | jq -r .token)"
 
 query='{"operationName":"RemoveUserFromGroup","query":"mutation RemoveUserFromGroup($user: String!, $group: Int!) {removeUserFromGroup(userId: $user, groupId: $group) {ok}}"}'
-variables="$(jo -- user="$(tofu output -raw user_id)" group="$(tofu output -raw group_id)")"
+variables="$(jq -n --arg user "$(tofu output -raw user_id)" --arg group "$(tofu output -raw group_id)" '{user: $user, group: ($group | tonumber)}')"
 data="$(echo "$query" "{ \"variables\": $variables }" | jq -s add)"
 
 curl \
