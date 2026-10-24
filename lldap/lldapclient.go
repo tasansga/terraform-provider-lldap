@@ -673,6 +673,11 @@ func (lc *LldapClient) RemoveUserFromGroup(groupId int, userId string) diag.Diag
 		return diag.Errorf("Could not unmarshal response: %s", unmarshErr)
 	}
 	if removeUserResponse.Errors != nil {
+		for _, err := range removeUserResponse.Errors {
+			if strings.Contains(err.Message, fmt.Sprintf("No such membership: '%s' -> %d", userId, groupId)) {
+				return nil
+			}
+		}
 		return diag.Errorf("GraphQL query returned error: %s", string(response))
 	}
 	if !removeUserResponse.Data.RemoveUserFromGroup.OK {
