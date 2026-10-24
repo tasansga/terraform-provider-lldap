@@ -77,6 +77,91 @@ func TestRemoveUserFromGroup_ErrorResponse(t *testing.T) {
 	assert.Contains(t, diags[0].Summary, "Failed to remove user from group")
 }
 
+func TestRemoveUserFromGroup_NoSuchMembership(t *testing.T) {
+	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/simple/login" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"token":        "mock-token",
+				"refreshToken": "mock-refresh",
+			})
+			return
+		}
+
+		if r.URL.Path == "/api/graphql" {
+			var query struct {
+				OperationName string `json:"operationName"`
+			}
+			err := json.NewDecoder(r.Body).Decode(&query)
+			require.NoError(t, err)
+
+			if query.OperationName == "RemoveUserFromGroup" {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"data": nil,
+					"errors": []map[string]any{
+						{
+							"message": "Entity not found: `No such membership: 'user-v7e8fsbj-oob' -> 4`",
+							"locations": []map[string]any{
+								{"line": 1, "column": 61},
+							},
+							"path": []string{"removeUserFromGroup"},
+						},
+					},
+				})
+				return
+			}
+		}
+
+		http.Error(w, "not found", http.StatusNotFound)
+	})
+	defer server.Close()
+
+	diags := client.RemoveUserFromGroup(4, "user-v7e8fsbj-oob")
+	assert.Nil(t, diags, "expected nil diagnostics when membership already does not exist")
+}
+
+func TestRemoveUserFromGroup_OtherGraphQLError(t *testing.T) {
+	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/auth/simple/login" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"token":        "mock-token",
+				"refreshToken": "mock-refresh",
+			})
+			return
+		}
+
+		if r.URL.Path == "/api/graphql" {
+			var query struct {
+				OperationName string `json:"operationName"`
+			}
+			err := json.NewDecoder(r.Body).Decode(&query)
+			require.NoError(t, err)
+
+			if query.OperationName == "RemoveUserFromGroup" {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"data": nil,
+					"errors": []map[string]any{
+						{
+							"message": "Some internal server error",
+						},
+					},
+				})
+				return
+			}
+		}
+
+		http.Error(w, "not found", http.StatusNotFound)
+	})
+	defer server.Close()
+
+	diags := client.RemoveUserFromGroup(1, "alice")
+	require.True(t, diags.HasError(), "expected error when GraphQL returns non-membership error")
+	assert.Contains(t, diags[0].Summary, "GraphQL query returned error")
+}
+
 func TestGetUserAttributeSchema_CaseInsensitive(t *testing.T) {
 	server, client := newMockLldapServer(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/graphql" {
