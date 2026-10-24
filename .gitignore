@@ -1,6 +1,7 @@
 /dist/
 /cmd/terraform-provider-lldap/docs
 /.vscode
+/.idea
 .terraform
 .terraform.lock.hcl
 *.tfvars
