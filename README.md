@@ -53,10 +53,12 @@ and generate docs.
 
 Works for me with:
 - Go 1.26.5
+- Golangci-lint 2.10.1
 - GNU make 4.4
 - Bash 5
 - LLDAP 0.6.2
 - Docker 27.5
+- jq 1.8.1
 
 The client uses mostly the [LLDAP GraphQL API](https://github.com/lldap/lldap/blob/main/docs/scripting.md) (see also the [schema](https://github.com/lldap/lldap/blob/main/schema.graphql)).
 
