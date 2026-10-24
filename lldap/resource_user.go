@@ -10,8 +10,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceUser() *schema.Resource {
@@ -93,7 +95,22 @@ func resourceUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider",
+				Description: "Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider.",
+			},
+			"password_wo": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				WriteOnly:     true,
+				Description:   "Password for the user as a write-only attribute. Increment password_wo_version when this value needs to be updated.",
+				ConflictsWith: []string{"password"},
+				RequiredWith:  []string{"password_wo_version"},
+			},
+			"password_wo_version": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Triggers an update of password_wo. Increment this value when a password update is needed.",
+				ConflictsWith: []string{"password"},
+				RequiredWith:  []string{"password_wo"},
 			},
 			"username": {
 				Type:        schema.TypeString,
@@ -110,7 +127,24 @@ func resourceUser() *schema.Resource {
 				Description: "UUID of user",
 			},
 		},
+		ValidateRawResourceConfigFuncs: []schema.ValidateRawResourceConfigFunc{
+			validation.PreferWriteOnlyAttribute(cty.GetAttrPath("password"), cty.GetAttrPath("password_wo")),
+		},
 	}
+}
+
+func resourceUserGetWriteOnlyPassword(d *schema.ResourceData) (string, diag.Diagnostics) {
+	value, diags := d.GetRawConfigAt(cty.GetAttrPath("password_wo"))
+
+	if diags.HasError() {
+		return "", diags
+	}
+
+	if !value.IsKnown() || value.IsNull() {
+		return "", nil
+	}
+
+	return value.AsString(), nil
 }
 
 func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.Diagnostics {
@@ -130,11 +164,7 @@ func resourceUserSetResourceData(d *schema.ResourceData, user *LldapUser) diag.D
 			return diag.FromErr(setErr)
 		}
 	}
-	if user.Password != "" {
-		if setErr := d.Set("password", user.Password); setErr != nil {
-			return diag.FromErr(setErr)
-		}
-	}
+
 	return nil
 }
 
@@ -142,7 +172,6 @@ func resourceUserGetResourceData(d *schema.ResourceData) LldapUser {
 	return LldapUser{
 		Id:          d.Get("username").(string),
 		Email:       d.Get("email").(string),
-		Password:    d.Get("password").(string),
 		DisplayName: d.Get("display_name").(string),
 		FirstName:   d.Get("first_name").(string),
 		LastName:    d.Get("last_name").(string),
@@ -153,22 +182,48 @@ func resourceUserGetResourceData(d *schema.ResourceData) LldapUser {
 
 func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	user := resourceUserGetResourceData(d)
+
+	var password string
+	var isWriteOnlyPassword bool
+
+	if _, ok := d.GetOk("password"); !ok {
+		writeOnlyPassword, diags := resourceUserGetWriteOnlyPassword(d)
+
+		if diags.HasError() {
+			return diags
+		}
+
+		password = writeOnlyPassword
+		isWriteOnlyPassword = true
+	} else {
+		password = d.Get("password").(string)
+		isWriteOnlyPassword = false
+	}
+
 	lc := m.(*LldapClient)
 	createErr := lc.CreateUser(&user)
 	if createErr != nil {
 		return createErr
 	}
-	if user.Password != "" {
-		setPwErr := lc.SetUserPassword(user.Id, user.Password)
+	if password != "" {
+		setPwErr := lc.SetUserPassword(user.Id, password)
 		if setPwErr != nil {
 			return setPwErr
 		}
 	}
 	d.SetId(user.Id)
+
 	setRdErr := resourceUserSetResourceData(d, &user)
 	if setRdErr != nil {
 		return setRdErr
 	}
+
+	if !isWriteOnlyPassword {
+		if setErr := d.Set("password", password); setErr != nil {
+			return diag.FromErr(setErr)
+		}
+	}
+
 	return nil
 }
 
@@ -183,18 +238,24 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 		}
 		return getUserErr
 	}
-	// We cannot read the password from LLDAP, but we can check whether the value from state is still valid.
-	statePassword := d.Get("password").(string)
-	if statePassword != "" {
-		isValidPassword, _ := lc.IsValidPassword(user.Id, statePassword)
-		if isValidPassword {
-			user.Password = statePassword
-		}
-	}
+
 	setRdErr := resourceUserSetResourceData(d, user)
 	if setRdErr != nil {
 		return setRdErr
 	}
+
+	// We cannot read the password from LLDAP, but we can check whether the value from state is still valid.
+	statePassword := d.Get("password").(string)
+	if statePassword != "" {
+		isValidPassword, _ := lc.IsValidPassword(user.Id, statePassword)
+
+		if isValidPassword {
+			if setErr := d.Set("password", statePassword); setErr != nil {
+				return diag.FromErr(setErr)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -205,13 +266,33 @@ func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	if updateErr != nil {
 		return updateErr
 	}
-	if user.Password != "" {
-		isValidPassword, bindErr := lc.IsValidPassword(user.Id, user.Password)
+
+	if d.HasChange("password_wo_version") {
+		password, diags := resourceUserGetWriteOnlyPassword(d)
+		if diags.HasError() {
+			return diags
+		}
+
+		if password == "" {
+			return diag.Errorf("password_wo must be non-empty when password_wo_version changes")
+		}
+
+		if setPwErr := lc.SetUserPassword(user.Id, password); setPwErr != nil {
+			return setPwErr
+		}
+
+		return nil
+	}
+
+	statePassword := d.Get("password").(string)
+
+	if statePassword != "" {
+		isValidPassword, bindErr := lc.IsValidPassword(user.Id, statePassword)
 		if bindErr != nil {
 			return bindErr
 		}
 		if !isValidPassword {
-			setPwErr := lc.SetUserPassword(user.Id, user.Password)
+			setPwErr := lc.SetUserPassword(user.Id, statePassword)
 			if setPwErr != nil {
 				return setPwErr
 			}

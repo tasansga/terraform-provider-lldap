@@ -133,7 +133,6 @@ func (group *LldapGroup) GetUserIds() []string {
 
 type LldapUser struct {
 	Id           string                 `json:"id"`
-	Password     string                 `json:"password"`
 	Email        string                 `json:"email"`
 	DisplayName  string                 `json:"displayName"`
 	FirstName    string                 `json:"firstName"`
