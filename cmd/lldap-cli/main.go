@@ -230,6 +230,28 @@ var userCmds = map[string]*cobra.Command{
 			return nil
 		},
 	},
+	"verify-password": {
+		Use:           "verify-password <uid> <password>",
+		Short:         "Verify the password of an user",
+		Args:          cobra.ExactArgs(2),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			isCorrect, pwdErr := lc.IsValidPassword(args[0], args[1])
+			if pwdErr != nil {
+				logger.Error("could not verify user password", slog.Any("error", pwdErr))
+				return fmt.Errorf("could not verify user password")
+			}
+
+			if !isCorrect {
+				logger.Error("user password is incorrect", slog.String("uid", args[0]))
+				return fmt.Errorf("user password is incorrect")
+			}
+
+			logger.Info("user password verified", slog.String("uid", args[0]))
+			return nil
+		},
+	},
 }
 
 var groupCmds = map[string]*cobra.Command{
