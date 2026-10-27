@@ -27,6 +27,7 @@ CLI_OUTPUT_CHECKS=(
   "user:main_user"
   "user:nopasswd_user"
   "user:user_with_attrs"
+  "user:ignored_password_user"
   "group:group_with_attrs"
   "group:group_with_members"
   "group:test_group_detailed"

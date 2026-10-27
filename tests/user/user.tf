@@ -122,7 +122,7 @@ resource "lldap_user" "user_with_attrs" {
 
 # Data sources for verification
 data "lldap_users" "all_users" {
-  depends_on = [lldap_user.test_users, lldap_user.user, lldap_user.nopasswd, lldap_user.user_with_attrs]
+  depends_on = [lldap_user.test_users, lldap_user.user, lldap_user.nopasswd, lldap_user.user_with_attrs, lldap_user.ignored_password_user]
 }
 
 data "lldap_user_attributes" "all_user_attrs" {
@@ -175,4 +175,42 @@ output "test_attr" {
 
 output "all_user_attrs" {
   value = data.lldap_user_attributes.all_user_attrs
+}
+
+variable "create_ignored_password_user" {
+  type    = bool
+  default = false
+}
+
+variable "ignored_password_email_prefix" {
+  type    = string
+  default = "initial"
+}
+
+resource "random_password" "ignored_user_password" {
+  count   = var.create_ignored_password_user ? 1 : 0
+  length  = 16
+  special = false
+}
+
+resource "lldap_user" "ignored_password_user" {
+  count        = var.create_ignored_password_user ? 1 : 0
+  username     = "user-ign-${random_string.suffix.result}"
+  email        = "ign-${var.ignored_password_email_prefix}-${random_string.suffix.result}@this.test"
+  password     = random_password.ignored_user_password[0].result
+  display_name = "Ignored Password User"
+
+  lifecycle {
+    ignore_changes = [password]
+  }
+}
+
+output "ignored_password_user" {
+  value     = var.create_ignored_password_user ? lldap_user.ignored_password_user[0] : null
+  sensitive = true
+}
+
+output "ignored_user_password" {
+  value     = var.create_ignored_password_user ? random_password.ignored_user_password[0].result : null
+  sensitive = true
 }
