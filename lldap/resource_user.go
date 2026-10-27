@@ -205,16 +205,10 @@ func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	if updateErr != nil {
 		return updateErr
 	}
-	if user.Password != "" {
-		isValidPassword, bindErr := lc.IsValidPassword(user.Id, user.Password)
-		if bindErr != nil {
-			return bindErr
-		}
-		if !isValidPassword {
-			setPwErr := lc.SetUserPassword(user.Id, user.Password)
-			if setPwErr != nil {
-				return setPwErr
-			}
+	if d.HasChange("password") && user.Password != "" {
+		setPwErr := lc.SetUserPassword(user.Id, user.Password)
+		if setPwErr != nil {
+			return setPwErr
 		}
 	}
 	return nil
