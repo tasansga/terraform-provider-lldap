@@ -8,9 +8,31 @@ description: |-
 
 Manages a LLDAP user
 
+~> **Note:** `password` will be stored in the raw state as plain-text.
+[Read more about sensitive data in state](https://www.terraform.io/docs/state/sensitive-data.html).
+For enhanced security, consider using the `password_wo` and `password_wo_version` attributes
+instead of `password`. The write-only password attributes prevent the password from being stored in
+the Terraform state file while still allowing password management through version-controlled updates.
+[Read more about write-only attributes](https://developer.hashicorp.com/terraform/language/manage-sensitive-data/write-only).
+
 ## Example Usage
 
 {{ tffile "examples/resources/lldap_user/resource.tf" }}
+
+## Write-Only Password Management
+
+The `password_wo` and `password_wo_version` attributes provide a secure way to manage user passwords
+without storing them in the Terraform state file:
+
+* **Security**: The password value is never stored in the state file, reducing the risk of exposure
+* **Version Control**: Password updates are controlled through the `password_wo_version` attribute
+* **Idempotency**: Terraform only updates the password when the version changes, not on every apply
+
+To change a password when using write-only attributes:
+
+1. Update the `password_wo` value with the new password
+2. Increment or change the `password_wo_version` value
+3. Apply the configuration
 
 ## Import
 
