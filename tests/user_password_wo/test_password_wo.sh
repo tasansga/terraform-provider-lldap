@@ -50,3 +50,7 @@ tofu show -json |
 
 "$LLDAP_CLI_CMD" user verify-password "$USER_ID" "hunter4"
 tofu plan -detailed-exitcode -var password_wo="hunter4" -var password_wo_version="2"
+
+# Clean up created resources
+tofu apply -auto-approve -destroy -var password_wo="hunter4" -var password_wo_version="2"
+rm -f terraform.tfstate terraform.tfstate.backup *.tfplan

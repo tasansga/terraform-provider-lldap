@@ -186,17 +186,19 @@ func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	var password string
 	var isWriteOnlyPassword bool
 
-	if _, ok := d.GetOk("password"); !ok {
-		writeOnlyPassword, diags := resourceUserGetWriteOnlyPassword(d)
+	rawWoPassword, diags := resourceUserGetWriteOnlyPassword(d)
+	if diags.HasError() {
+		return diags
+	}
 
-		if diags.HasError() {
-			return diags
-		}
-
-		password = writeOnlyPassword
+	if rawWoPassword != "" {
+		password = rawWoPassword
 		isWriteOnlyPassword = true
+	} else if v, ok := d.GetOk("password"); ok {
+		password = v.(string)
+		isWriteOnlyPassword = false
 	} else {
-		password = d.Get("password").(string)
+		password = ""
 		isWriteOnlyPassword = false
 	}
 
