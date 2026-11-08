@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
@@ -177,6 +178,7 @@ type LldapClient struct {
 	Token        string
 	RefreshToken string
 	HttpClient   *http.Client
+	ldapMutex    sync.Mutex
 	LdapClient   *ldap.Conn
 }
 
@@ -193,7 +195,7 @@ func getLdapBindConnection(ldapUrl string, baseDn string, username string, passw
 	if dialErr != nil {
 		return nil, diag.Errorf("unable to dial ldap url: %s", dialErr)
 	}
-	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeFilter(username), baseDn)
+	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeDN(username), baseDn)
 	bindErr := ldapclient.Bind(userDn, password)
 	if bindErr != nil {
 		return nil, diag.Errorf("could not bind to ldap server: %s", bindErr)
@@ -219,20 +221,27 @@ func (lc *LldapClient) IsValidPassword(username string, password string) (bool, 
 	return true, nil
 }
 
+var getLdapBindConnectionFunc = getLdapBindConnection
+
 func (lc *LldapClient) SetUserPassword(username string, newPassword string) diag.Diagnostics {
-	if lc.LdapClient == nil {
-		ldapclient, bindErr := getLdapBindConnection(lc.Config.LdapUrl.String(), lc.Config.BaseDn, lc.Config.UserName, lc.Config.Password)
+	lc.ldapMutex.Lock()
+	defer lc.ldapMutex.Unlock()
+
+	if lc.LdapClient == nil || lc.LdapClient.IsClosing() {
+		ldapclient, bindErr := getLdapBindConnectionFunc(lc.Config.LdapUrl.String(), lc.Config.BaseDn, lc.Config.UserName, lc.Config.Password)
 		if bindErr != nil {
 			return bindErr
 		}
 		lc.LdapClient = ldapclient
 	}
-	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeFilter(username), lc.Config.BaseDn)
+	userDn := fmt.Sprintf("cn=%s,ou=people,%s", ldap.EscapeDN(username), lc.Config.BaseDn)
 	_, modifyErr := lc.LdapClient.PasswordModify(&ldap.PasswordModifyRequest{
 		UserIdentity: userDn,
 		NewPassword:  newPassword,
 	})
 	if modifyErr != nil {
+		_ = lc.LdapClient.Close()
+		lc.LdapClient = nil
 		return diag.Errorf("unable to modify password for '%s': %s", userDn, modifyErr)
 	}
 	return nil

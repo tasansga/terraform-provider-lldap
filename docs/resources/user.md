@@ -30,7 +30,7 @@ resource "lldap_user" "user" {
 }
 
 # Example using write-only password (password not stored in state)
-resource "lldap_user" "user" {
+resource "lldap_user" "user_wo" {
   username            = "myuser"
   email               = "myuser@in.the.test"
   display_name        = "My User"
@@ -73,14 +73,12 @@ terraform import lldap_user.example admin
 
 ### Optional
 
-> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
-
 - `avatar` (String) Base 64 encoded JPEG image
 - `display_name` (String) Display name of this user
 - `first_name` (String) First name of this user
 - `last_name` (String) Last name of this user
 - `password` (String, Sensitive) Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider.
-- `password_wo` (String, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Sets the password for the user without storing it in the state file. Must be used together with `password_wo_version`. Conflicts with `password`.
+- `password_wo` (String, Sensitive) Sets the password for the user without storing it in the state file. Must be used together with `password_wo_version`. Conflicts with `password`.
 - `password_wo_version` (String) Prevents applies from updating the user password on every apply unless the value changes. This version string should be updated whenever you want to change the password specified in password_wo. Must be used together with password_wo. Conflicts with password.
 
 ### Read-Only

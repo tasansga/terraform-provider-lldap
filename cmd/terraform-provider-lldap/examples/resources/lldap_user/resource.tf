@@ -10,7 +10,7 @@ resource "lldap_user" "user" {
 }
 
 # Example using write-only password (password not stored in state)
-resource "lldap_user" "user" {
+resource "lldap_user" "user_wo" {
   username            = "myuser"
   email               = "myuser@in.the.test"
   display_name        = "My User"
