@@ -23,7 +23,7 @@ import (
 )
 
 var logger = slog.Default()
-var lc lldap.LldapClient
+var lc *lldap.LldapClient
 
 var isInit = false
 
@@ -100,7 +100,7 @@ The following environment variables are supported by all subcommands:
 		if getClientErr != nil {
 			return getClientErr
 		}
-		lc = *lclient
+		lc = lclient
 		return nil
 	},
 }
@@ -232,7 +232,7 @@ var userCmds = map[string]*cobra.Command{
 	},
 	"verify-password": {
 		Use:           "verify-password <uid> <password>",
-		Short:         "Verify the password of an user",
+		Short:         "Verify the password of a user",
 		Args:          cobra.ExactArgs(2),
 		SilenceErrors: true,
 		SilenceUsage:  true,

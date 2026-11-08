@@ -8,9 +8,16 @@ package lldap
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
+	"net/url"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/go-ldap/ldap/v3"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -163,3 +170,45 @@ func TestGetGroupAttributeSchema_CaseInsensitive(t *testing.T) {
 	require.NotNil(t, schema, "expected case-insensitive match for CustomGroupAttr")
 	assert.Equal(t, "customgroupattr", schema.Name)
 }
+
+func TestSetUserPassword_Concurrency(t *testing.T) {
+	origFunc := getLdapBindConnectionFunc
+	defer func() { getLdapBindConnectionFunc = origFunc }()
+
+	c1, c2 := net.Pipe()
+	_ = c2.Close()
+	defer func() { _ = c1.Close() }()
+	ldapConn := ldap.NewConn(c1, false)
+	ldapConn.Start()
+
+	getLdapBindConnectionFunc = func(ldapUrl string, baseDn string, username string, password string) (*ldap.Conn, diag.Diagnostics) {
+		time.Sleep(10 * time.Millisecond)
+		return ldapConn, nil
+	}
+
+	client := &LldapClient{
+		Config: Config{
+			LdapUrl:  &url.URL{Scheme: "ldap", Host: "127.0.0.1:389"},
+			UserName: "admin",
+			Password: "password",
+			BaseDn:   "dc=example,dc=com",
+		},
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			_ = client.SetUserPassword(fmt.Sprintf("user%d", idx), "newpass")
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestEscapeDN_SpecialCharacters(t *testing.T) {
+	escaped := ldap.EscapeDN("user,test+special<val>")
+	assert.Equal(t, `user\,test\+special\<val\>`, escaped)
+}
+
+

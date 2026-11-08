@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceUser() *schema.Resource {
@@ -92,14 +91,16 @@ func resourceUser() *schema.Resource {
 				Description: "Last name of this user",
 			},
 			"password": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				Description: "Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"password_wo", "password_wo_version"},
+				Description:   "Password for the user. Note that the provider cannot read the password from LLDAP, so if this value is not set, the password attribute will be entirely ignored by the provider.",
 			},
 			"password_wo": {
 				Type:          schema.TypeString,
 				Optional:      true,
+				Sensitive:     true,
 				WriteOnly:     true,
 				Description:   "Sets the password for the user without storing it in the state file. Must be used together with `password_wo_version`. Conflicts with `password`.",
 				ConflictsWith: []string{"password"},
@@ -127,17 +128,22 @@ func resourceUser() *schema.Resource {
 				Description: "UUID of user",
 			},
 		},
-		ValidateRawResourceConfigFuncs: []schema.ValidateRawResourceConfigFunc{
-			validation.PreferWriteOnlyAttribute(cty.GetAttrPath("password"), cty.GetAttrPath("password_wo")),
-		},
 	}
 }
 
 func resourceUserGetWriteOnlyPassword(d *schema.ResourceData) (string, diag.Diagnostics) {
+	if d.GetRawConfig().IsNull() {
+		return "", nil
+	}
+
 	value, diags := d.GetRawConfigAt(cty.GetAttrPath("password_wo"))
 
 	if diags.HasError() {
 		return "", diags
+	}
+
+	if value.IsMarked() {
+		value, _ = value.Unmark()
 	}
 
 	if !value.IsKnown() || value.IsNull() {
@@ -202,22 +208,27 @@ func resourceUserCreate(_ context.Context, d *schema.ResourceData, m any) diag.D
 		isWriteOnlyPassword = false
 	}
 
+	if v, ok := d.GetOk("password_wo_version"); ok && v.(string) != "" && password == "" {
+		return diag.Errorf("password_wo must be non-empty when password_wo_version is set")
+	}
+
 	lc := m.(*LldapClient)
 	createErr := lc.CreateUser(&user)
 	if createErr != nil {
 		return createErr
-	}
-	if password != "" {
-		setPwErr := lc.SetUserPassword(user.Id, password)
-		if setPwErr != nil {
-			return setPwErr
-		}
 	}
 	d.SetId(user.Id)
 
 	setRdErr := resourceUserSetResourceData(d, &user)
 	if setRdErr != nil {
 		return setRdErr
+	}
+
+	if password != "" {
+		setPwErr := lc.SetUserPassword(user.Id, password)
+		if setPwErr != nil {
+			return setPwErr
+		}
 	}
 
 	if !isWriteOnlyPassword {
@@ -246,18 +257,6 @@ func resourceUserRead(_ context.Context, d *schema.ResourceData, m any) diag.Dia
 		return setRdErr
 	}
 
-	// We cannot read the password from LLDAP, but we can check whether the value from state is still valid.
-	statePassword := d.Get("password").(string)
-	if statePassword != "" {
-		isValidPassword, _ := lc.IsValidPassword(user.Id, statePassword)
-
-		if isValidPassword {
-			if setErr := d.Set("password", statePassword); setErr != nil {
-				return diag.FromErr(setErr)
-			}
-		}
-	}
-
 	return nil
 }
 
@@ -270,17 +269,20 @@ func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	}
 
 	if d.HasChange("password_wo_version") {
-		password, diags := resourceUserGetWriteOnlyPassword(d)
-		if diags.HasError() {
-			return diags
-		}
+		newVersion := d.Get("password_wo_version").(string)
+		if newVersion != "" {
+			password, diags := resourceUserGetWriteOnlyPassword(d)
+			if diags.HasError() {
+				return diags
+			}
 
-		if password == "" {
-			return diag.Errorf("password_wo must be non-empty when password_wo_version changes")
-		}
+			if password == "" {
+				return diag.Errorf("password_wo must be non-empty when password_wo_version changes")
+			}
 
-		if setPwErr := lc.SetUserPassword(user.Id, password); setPwErr != nil {
-			return setPwErr
+			if setPwErr := lc.SetUserPassword(user.Id, password); setPwErr != nil {
+				return setPwErr
+			}
 		}
 
 		return nil
@@ -289,15 +291,9 @@ func resourceUserUpdate(_ context.Context, d *schema.ResourceData, m any) diag.D
 	statePassword := d.Get("password").(string)
 
 	if d.HasChange("password") && statePassword != "" {
-		isValidPassword, bindErr := lc.IsValidPassword(user.Id, statePassword)
-		if bindErr != nil {
-			return bindErr
-		}
-		if !isValidPassword {
-			setPwErr := lc.SetUserPassword(user.Id, statePassword)
-			if setPwErr != nil {
-				return setPwErr
-			}
+		setPwErr := lc.SetUserPassword(user.Id, statePassword)
+		if setPwErr != nil {
+			return setPwErr
 		}
 	}
 	return nil

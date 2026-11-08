@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -exo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../test_helpers/cli_checks.sh"
 rm -f terraform.tfstate terraform.tfstate.backup *.tfplan
+
+trap 'tofu apply -auto-approve -destroy -var password_wo="hunter4" -var password_wo_version="2" || true; rm -f terraform.tfstate terraform.tfstate.backup *.tfplan' EXIT
 
 LLDAP_CLI_CMD="${LLDAP_CLI_BIN:-../../dist/lldap-cli}"
 
@@ -50,7 +51,3 @@ tofu show -json |
 
 "$LLDAP_CLI_CMD" user verify-password "$USER_ID" "hunter4"
 tofu plan -detailed-exitcode -var password_wo="hunter4" -var password_wo_version="2"
-
-# Clean up created resources
-tofu apply -auto-approve -destroy -var password_wo="hunter4" -var password_wo_version="2"
-rm -f terraform.tfstate terraform.tfstate.backup *.tfplan

@@ -26,14 +26,14 @@ import (
 )
 
 // getTestClient creates a real LLDAP client for integration tests
-func getTestClient() lldap.LldapClient {
+func getTestClient() *lldap.LldapClient {
 	hostIp := os.Getenv("LLDAP_HOST")
 	password := os.Getenv("LLDAP_PASSWORD")
 	httpPort := os.Getenv("LLDAP_PORT_HTTP")
 	ldapPort := os.Getenv("LLDAP_PORT_LDAP")
 	parsedHttpUrl, _ := url.Parse(fmt.Sprintf("http://%s:%s", hostIp, httpPort))
 	parsedLdapUrl, _ := url.Parse(fmt.Sprintf("ldap://%s:%s", hostIp, ldapPort))
-	client := lldap.LldapClient{
+	client := &lldap.LldapClient{
 		Config: lldap.Config{
 			HttpUrl:  parsedHttpUrl,
 			LdapUrl:  parsedLdapUrl,
