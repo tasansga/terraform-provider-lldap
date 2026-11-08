@@ -9,6 +9,9 @@ set -eo pipefail
 readonly DATABASE="postgres"
 readonly COMMAND="$1"
 
+readonly POSTGRES_VERSION=18.6
+readonly LLDAP_VERSION=2026-09-22
+
 function get_container_host_port {
     local cnt_id="$1"
     local container_port="$2"
@@ -85,7 +88,7 @@ function start_postgres_server {
         --env "POSTGRES_DB=lldap" \
         --env "POSTGRES_USER=postgres" \
         --env "POSTGRES_PASSWORD=${passwd}" \
-        postgres:latest)
+        "docker.io/postgres:$POSTGRES_VERSION")
     local postgres_port
     postgres_port=$(get_container_host_port "$postgres_cnt_id" "5432/tcp") || return 1
     local postgres_cnt_ip="127.0.0.1"
@@ -151,7 +154,7 @@ function start_lldap_server {
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
             --env "LLDAP_LDAP_BASE_DN=dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
             --env "LLDAP_JWT_SECRET=$(uuidgen)" \
-            lldap/lldap:latest)
+            "docker.io/lldap/lldap:$LLDAP_VERSION")
     else
         lldap_cnt_id=$(docker run \
             --detach \
@@ -161,7 +164,7 @@ function start_lldap_server {
             --env "LLDAP_LDAP_USER_PASS=${passwd}" \
             --env "LLDAP_LDAP_BASE_DN=dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com" \
             --env "LLDAP_JWT_SECRET=$(uuidgen)" \
-            lldap/lldap:latest)
+            "docker.io/lldap/lldap:$LLDAP_VERSION")
     fi
 
     if [[ "$DEBUG" == "true" ]]
