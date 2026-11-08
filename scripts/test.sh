@@ -280,6 +280,9 @@ function run_integration_test_lldap {
 function run_integration_test {
     local input_path="$1"
     local root_dir="${2:-}"
+    local temp_test_dir="${3:-${temp_test_dir:-}}"
+    local tf_uname="${4:-${tf_uname:-}}"
+    local tf_uname_arch="${5:-${tf_uname_arch:-}}"
     local test_path=""
     local test_name=""
 
@@ -298,7 +301,6 @@ function run_integration_test {
     fi
 
     trap stop_server RETURN
-    trap stop_server EXIT
     start_server
 
     echo "Running test: ${test_path}"
@@ -317,7 +319,24 @@ EOF
     export LLDAP_USER="admin"
     export LLDAP_PASSWORD="$LLDAP_PASSWORD"
     export LLDAP_BASE_DN="dc=terraform-provider-lldap,dc=tasansga,dc=github,dc=com"
+    # Ensure lldap provider is not in cache before init
+    if [[ -n "${TF_PLUGIN_CACHE_DIR:-}" && -d "$TF_PLUGIN_CACHE_DIR" ]]; then
+        rm -rf "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga/lldap/0.0.1" "${TF_PLUGIN_CACHE_DIR}/tasansga/lldap/0.0.1" 2>/dev/null || true
+    fi
     tofu init -reconfigure -upgrade
+    # Re-link provider directly to current build in temp_test_dir and remove lldap from shared cache
+    if [[ -n "${temp_test_dir:-}" && -n "${tf_uname:-}" && -n "${tf_uname_arch:-}" ]]; then
+        local installed_lldap_dir=".terraform/providers/registry.opentofu.org/tasansga/lldap/0.0.1/${tf_uname}_${tf_uname_arch}"
+        if [[ -e "$installed_lldap_dir" || -L "$installed_lldap_dir" ]]; then
+            rm -rf "$installed_lldap_dir"
+            ln -s "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/${tf_uname}_${tf_uname_arch}" "$installed_lldap_dir"
+        fi
+    fi
+    if [[ -n "${TF_PLUGIN_CACHE_DIR:-}" && -d "$TF_PLUGIN_CACHE_DIR" ]]; then
+        rm -rf "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga/lldap/0.0.1" "${TF_PLUGIN_CACHE_DIR}/tasansga/lldap/0.0.1" 2>/dev/null || true
+        rmdir "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga/lldap" 2>/dev/null || true
+        rmdir "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga" 2>/dev/null || true
+    fi
 
     if [ -n "$test_name" ] && [ -e "${test_path}/test_${test_name}.sh" ]; then
         # Run specific test file
@@ -349,21 +368,29 @@ function run_integration_tests {
     scripts_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
     local tf_provider_lldap_root_dir
     tf_provider_lldap_root_dir=$(realpath "${scripts_dir}/..")
-    local temp_test_dir
     temp_test_dir=$(mktemp -d)
 
-    function on_integration_test_exit {
-        if [[ -d "$temp_test_dir" ]]
-        then
-            rm -vRf "$temp_test_dir"
+    export TF_PLUGIN_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/terraform-provider-lldap/plugin-cache"
+    mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+    function on_integration_tests_exit {
+        stop_server
+        if [[ -n "${temp_test_dir:-}" && -d "$temp_test_dir" ]]; then
+            rm -Rf "$temp_test_dir"
+            temp_test_dir=""
+        fi
+        if [[ -n "${TF_PLUGIN_CACHE_DIR:-}" && -d "$TF_PLUGIN_CACHE_DIR" ]]; then
+            rm -rf "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga/lldap/0.0.1" "${TF_PLUGIN_CACHE_DIR}/tasansga/lldap/0.0.1" 2>/dev/null || true
+            rmdir "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga/lldap" 2>/dev/null || true
+            rmdir "${TF_PLUGIN_CACHE_DIR}/registry.opentofu.org/tasansga" 2>/dev/null || true
         fi
     }
-    trap on_integration_test_exit RETURN
-    trap on_integration_test_exit EXIT
+    trap on_integration_tests_exit EXIT INT TERM
 
     cd "${tf_provider_lldap_root_dir}"
     export LLDAP_CLI="${tf_provider_lldap_root_dir}/dist/lldap-cli"
     # macos: arm64, linux: aarch64
+    local tf_uname_arch
     if [[ $(uname -m) == "aarch64" ]] || [[ $(uname -m) == "arm64" ]]
     then
         tf_uname_arch="arm64"
@@ -373,6 +400,7 @@ function run_integration_tests {
     else
         tf_uname_arch=$(uname -m)
     fi
+    local tf_uname
     tf_uname=$(uname  | tr '[:upper:]' '[:lower:]')
     mkdir -p "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/${tf_uname}_${tf_uname_arch}/"
     cp "${tf_provider_lldap_root_dir}/dist/terraform-provider-lldap" "${temp_test_dir}/plugins/registry.opentofu.org/tasansga/lldap/0.0.1/${tf_uname}_${tf_uname_arch}/terraform-provider-lldap"
@@ -394,19 +422,25 @@ EOF
     then
         for f in "$tf_provider_lldap_root_dir"/tests/*
         do
-            run_integration_test "$f" "$tf_provider_lldap_root_dir"
+            if [[ "$(basename "$f")" == "test_helpers" ]]; then
+                continue
+            fi
+            run_integration_test "$f" "$tf_provider_lldap_root_dir" "$temp_test_dir" "$tf_uname" "$tf_uname_arch"
         done
     else
         # Handle both "env" and "env/basic" formats
         if [[ "$TEST" == */* ]]; then
             # TEST is like "env/basic" - pass the full path
-            run_integration_test "$TEST" "$tf_provider_lldap_root_dir"
+            run_integration_test "$TEST" "$tf_provider_lldap_root_dir" "$temp_test_dir" "$tf_uname" "$tf_uname_arch"
         else
             # TEST is like "env" - pass just the directory
             local f="${tf_provider_lldap_root_dir}/tests/${TEST}"
-            run_integration_test "$f" "$tf_provider_lldap_root_dir"
+            run_integration_test "$f" "$tf_provider_lldap_root_dir" "$temp_test_dir" "$tf_uname" "$tf_uname_arch"
         fi
     fi
+
+    on_integration_tests_exit
+    trap - EXIT INT TERM
 }
 
 case $COMMAND in
