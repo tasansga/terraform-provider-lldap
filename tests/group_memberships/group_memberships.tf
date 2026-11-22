@@ -25,10 +25,6 @@ variable "max_users" {
   default = 10
 }
 
-variable "enable_out_of_band_user" {
-  default = false
-}
-
 provider "lldap" {
   http_url = var.lldap_http_url
   ldap_url = var.lldap_ldap_url
@@ -70,12 +66,6 @@ resource "lldap_user" "out_of_band" {
   last_name    = "LAST"
 }
 
-resource "lldap_member" "out_of_band" {
-  count    = var.enable_out_of_band_user ? 1 : 0
-  group_id = lldap_group.group.id
-  user_id  = lldap_user.out_of_band.id
-}
-
 resource "lldap_group_memberships" "group" {
   group_id = lldap_group.group.id
   user_ids = toset([ for user in slice(lldap_user.user,0, var.num_users): user.id ])
@@ -84,7 +74,7 @@ resource "lldap_group_memberships" "group" {
 # Data sources for verification
 data "lldap_group" "test_group" {
   id = lldap_group.group.id
-  depends_on = [lldap_group_memberships.group, lldap_member.out_of_band]
+  depends_on = [lldap_group_memberships.group]
 }
 
 data "lldap_groups" "all_groups" {
@@ -136,10 +126,6 @@ output "test_users_detailed" {
 output "out_of_band_user" {
   value     = lldap_user.out_of_band
   sensitive = true
-}
-
-output "out_of_band_member" {
-  value = var.enable_out_of_band_user ? lldap_member.out_of_band[0] : null
 }
 
 output "num_users" {
